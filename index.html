@@ -122,9 +122,7 @@
       color: #1b1b1b;
     }
 
-    .yellow:hover {
-      background: #f0c800;
-    }
+    .yellow:hover { background: #f0c800; }
 
     input {
       width: 100%;
@@ -159,7 +157,6 @@
       border: 3px solid var(--yellow);
       border-radius: 14px;
       pointer-events: none;
-      box-shadow: 0 0 0 999px rgba(0,0,0,0.18);
     }
 
     .status {
@@ -268,6 +265,15 @@
     let scanTimer = null;
     let isProcessingBarcode = false;
 
+    document.addEventListener("DOMContentLoaded", function() {
+      document.getElementById("manualBarcode").addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          lookupManualBarcode();
+        }
+      });
+    });
+
     function setStatus(text) {
       document.getElementById("status").innerText = text;
     }
@@ -287,7 +293,6 @@
     }
 
     function getCurrentSearchText() {
-      const barcode = document.getElementById("editBarcode")?.value || "";
       const brand = document.getElementById("editBrand")?.value || "";
       const product = document.getElementById("editProduct")?.value || "";
       const size = document.getElementById("editSize")?.value || "";
@@ -306,11 +311,6 @@
         encodeURIComponent("site:nemlig.com " + cleanSearchText(searchText));
     }
 
-    function buildNemligSearchUrl(searchText) {
-      return "https://www.nemlig.com/soegning/" +
-        encodeURIComponent(cleanSearchText(searchText));
-    }
-
     function openBestGuess() {
       const searchText = getCurrentSearchText();
       if (!searchText) {
@@ -327,15 +327,6 @@
         return;
       }
       window.open(buildGoogleSearchUrl(searchText), "_blank", "noopener");
-    }
-
-    function openNemligSearch() {
-      const searchText = getCurrentSearchText();
-      if (!searchText) {
-        setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
-        return;
-      }
-      window.open(buildNemligSearchUrl(searchText), "_blank", "noopener");
     }
 
     async function startScanner() {
@@ -606,6 +597,18 @@
       }
     }
 
+    function scrollToResult() {
+      setTimeout(function() {
+        const result = document.getElementById("result");
+        if (result) {
+          result.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+        }
+      }, 150);
+    }
+
     function showEditableResult(values, title) {
       const resultDiv = document.getElementById("result");
 
@@ -639,10 +642,11 @@
           <div class="button-row">
             <button class="yellow" onclick="openBestGuess()">Gå direkte til bedste bud</button>
             <button onclick="openGoogleSearch()">Søg via Google</button>
-            <button class="secondary" onclick="openNemligSearch()">Prøv nemlig-søgning</button>
           </div>
         </section>
       `;
+
+      scrollToResult();
     }
 
     function escapeHtml(text) {
