@@ -18,12 +18,10 @@
       --muted: #667066;
       --card: #ffffff;
       --border: #dfe6dc;
-      --shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+      --shadow: 0 12px 35px rgba(0,0,0,0.08);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -32,15 +30,8 @@
       font-family: Arial, Helvetica, sans-serif;
     }
 
-    .page {
-      min-height: 100vh;
-      padding: 18px;
-    }
-
-    .app {
-      max-width: 760px;
-      margin: 0 auto;
-    }
+    .page { min-height: 100vh; padding: 14px; }
+    .app { max-width: 760px; margin: 0 auto; }
 
     .header {
       background: linear-gradient(135deg, var(--green), var(--dark-green));
@@ -61,7 +52,6 @@
       border-radius: 999px;
       font-weight: 800;
       margin-bottom: 16px;
-      letter-spacing: -0.5px;
     }
 
     .logo-dot {
@@ -72,25 +62,10 @@
       display: inline-block;
     }
 
-    h1 {
-      margin: 0 0 8px;
-      font-size: 30px;
-      letter-spacing: -0.7px;
-    }
-
-    h2 {
-      margin: 22px 0 10px;
-      font-size: 19px;
-    }
-
-    p {
-      line-height: 1.45;
-    }
-
-    .header p {
-      margin: 0;
-      color: rgba(255,255,255,0.92);
-    }
+    h1 { margin: 0 0 8px; font-size: 30px; }
+    h2 { margin: 22px 0 10px; font-size: 19px; }
+    p { line-height: 1.45; }
+    .header p { margin: 0; color: rgba(255,255,255,0.92); }
 
     .card {
       background: var(--card);
@@ -117,9 +92,7 @@
       margin-top: 10px;
     }
 
-    button,
-    .button-link {
-      appearance: none;
+    button, .button-link {
       border: 0;
       background: var(--green);
       color: white;
@@ -135,27 +108,18 @@
       min-height: 48px;
     }
 
-    button:hover,
-    .button-link:hover {
-      background: var(--dark-green);
-    }
+    button:hover, .button-link:hover { background: var(--dark-green); }
 
     .secondary {
       background: #edf1ec;
       color: var(--text);
     }
 
-    .secondary:hover {
-      background: #dfe6dc;
-    }
+    .secondary:hover { background: #dfe6dc; }
 
     .yellow {
       background: var(--yellow);
       color: #1b1b1b;
-    }
-
-    .yellow:hover {
-      background: #f0c800;
     }
 
     input {
@@ -168,14 +132,30 @@
       background: white;
     }
 
+    .video-wrap {
+      position: relative;
+      margin-top: 12px;
+    }
+
     video {
       width: 100%;
-      margin-top: 12px;
       border-radius: 18px;
       background: #111;
       border: 1px solid var(--border);
       max-height: 460px;
       object-fit: cover;
+    }
+
+    .scan-frame {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      top: 38%;
+      height: 24%;
+      border: 3px solid var(--yellow);
+      border-radius: 14px;
+      pointer-events: none;
+      box-shadow: 0 0 0 999px rgba(0,0,0,0.18);
     }
 
     .status {
@@ -197,10 +177,6 @@
       border-radius: 16px;
     }
 
-    .control-line {
-      margin-top: 10px;
-    }
-
     label {
       display: block;
       font-weight: 700;
@@ -208,10 +184,7 @@
       margin-bottom: 6px;
     }
 
-    input[type="range"] {
-      padding: 0;
-      margin: 0;
-    }
+    input[type="range"] { padding: 0; margin: 0; }
 
     .result-title {
       font-size: 22px;
@@ -245,28 +218,13 @@
       color: var(--muted);
     }
 
-    .hidden {
-      display: none;
-    }
+    canvas { display: none; }
 
     @media (max-width: 520px) {
-      .page {
-        padding: 10px;
-      }
-
-      .header,
-      .card {
-        border-radius: 18px;
-      }
-
-      h1 {
-        font-size: 26px;
-      }
-
-      button,
-      .button-link {
-        width: 100%;
-      }
+      .page { padding: 10px; }
+      .header, .card { border-radius: 18px; }
+      h1 { font-size: 26px; }
+      button, .button-link { width: 100%; }
     }
   </style>
 </head>
@@ -275,18 +233,14 @@
   <main class="page">
     <div class="app">
       <section class="header">
-        <div class="logo">
-          nemlig<span class="logo-dot"></span>scanner
-        </div>
+        <div class="logo">nemlig<span class="logo-dot"></span>scanner</div>
         <h1>Scan en vare og find den hos nemlig.com</h1>
-        <p>
-          Scan stregkoden eller skriv den manuelt. Appen finder produktdata og sender dig videre til bedste bud.
-        </p>
+        <p>Scan stregkoden eller skriv den manuelt. Appen finder produktdata og hjælper dig videre til bedste match.</p>
       </section>
 
       <section class="card">
         <div class="notice">
-          <strong>Prototype:</strong> Appen bruger åbne produktdata og Google-søgning. Derfor er resultatet et bedste bud, ikke et garanteret match.
+          <strong>Prototype:</strong> Appen bruger åbne produktdata og Google-søgning. Resultatet er derfor et bedste bud, ikke et garanteret match.
         </div>
 
         <h2>1. Scan med kamera</h2>
@@ -296,14 +250,17 @@
           <button class="secondary" onclick="stopScanner()">Stop scanning</button>
         </div>
 
-        <video id="video" muted playsinline></video>
+        <div class="video-wrap">
+          <video id="video" muted playsinline></video>
+          <div class="scan-frame"></div>
+        </div>
+
+        <canvas id="canvas"></canvas>
 
         <div id="cameraControls" class="controls">
-          <div class="control-line">
-            <label for="zoomSlider">Zoom</label>
-            <input id="zoomSlider" type="range" min="1" max="1" step="0.1" value="1" oninput="setZoom(this.value)" />
-            <div class="small" id="zoomText">Zoom ikke aktiv endnu</div>
-          </div>
+          <label for="zoomSlider">Zoom</label>
+          <input id="zoomSlider" type="range" min="1" max="1" step="0.1" value="1" oninput="setZoom(this.value)" />
+          <div class="small" id="zoomText">Zoom ikke aktiv endnu</div>
 
           <div class="button-row">
             <button id="torchButton" class="secondary" onclick="toggleTorch()">Tænd/sluk lys</button>
@@ -328,6 +285,9 @@
     let currentStream = null;
     let currentTrack = null;
     let torchOn = false;
+    let nativeDetector = null;
+    let scanTimer = null;
+    let isProcessingBarcode = false;
 
     function setStatus(text) {
       document.getElementById("status").innerText = text;
@@ -352,11 +312,6 @@
         encodeURIComponent("site:nemlig.com " + cleanSearchText(searchText));
     }
 
-    function buildGoogleLuckyUrl(searchText) {
-      return "https://www.google.com/search?btnI=1&q=" +
-        encodeURIComponent("site:nemlig.com " + cleanSearchText(searchText));
-    }
-
     function buildNemligSearchUrl(searchText) {
       return "https://www.nemlig.com/soegning/" +
         encodeURIComponent(cleanSearchText(searchText));
@@ -364,24 +319,20 @@
 
     async function startScanner() {
       try {
-        setStatus("Starter kamera...");
-
         stopScanner();
+        setStatus("Starter kamera...");
 
         const constraints = {
           video: {
             facingMode: { ideal: "environment" },
             width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            focusMode: { ideal: "continuous" },
-            advanced: [
-              { focusMode: "continuous" }
-            ]
+            height: { ideal: 1080 }
           },
           audio: false
         };
 
         currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+
         const video = document.getElementById("video");
         video.srcObject = currentStream;
         await video.play();
@@ -389,29 +340,97 @@
         currentTrack = currentStream.getVideoTracks()[0];
         setupCameraControls();
 
-        codeReader = new ZXing.BrowserMultiFormatReader();
+        isProcessingBarcode = false;
 
-        await codeReader.decodeFromVideoElement(video, async function(result, error) {
-          if (result) {
-            const barcode = result.text;
-            stopScanner();
-            setStatus("Stregkode fundet: " + barcode);
-            await lookupBarcode(barcode);
-          }
-        });
+        if ("BarcodeDetector" in window) {
+          nativeDetector = new BarcodeDetector({
+            formats: ["ean_13", "ean_8", "upc_a", "upc_e"]
+          });
 
-        setStatus("Kameraet er klar. Hold stregkoden roligt i midten af billedet.");
+          startNativeScanLoop();
+          setStatus("Scanner med mobilens indbyggede stregkodelæser. Hold stregkoden inden for den gule ramme.");
+        } else {
+          startZXingScanner(video);
+          setStatus("Scanner med fallback-læser. Hold stregkoden roligt inden for den gule ramme.");
+        }
       } catch (error) {
         console.error(error);
-        setStatus("Kameraet kunne ikke startes. Åbn siden via HTTPS og tillad kameraadgang.");
+        setStatus("Kameraet kunne ikke startes. Tjek at siden åbnes via HTTPS, og at kameraadgang er tilladt.");
       }
     }
 
-    function stopScanner() {
-      if (codeReader) {
+    function startNativeScanLoop() {
+      const video = document.getElementById("video");
+
+      scanTimer = setInterval(async function() {
+        if (!nativeDetector || isProcessingBarcode || video.readyState < 2) return;
+
         try {
-          codeReader.reset();
-        } catch (e) {}
+          const barcodes = await nativeDetector.detect(video);
+
+          if (barcodes && barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+
+            if (code) {
+              await handleScannedBarcode(code);
+            }
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }, 250);
+    }
+
+    function startZXingScanner(video) {
+      const hints = new Map();
+      const formats = [
+        ZXing.BarcodeFormat.EAN_13,
+        ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.UPC_A,
+        ZXing.BarcodeFormat.UPC_E
+      ];
+
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+      codeReader = new ZXing.BrowserMultiFormatReader(hints, 300);
+
+      codeReader.decodeFromVideoElement(video, async function(result, error) {
+        if (result && result.text) {
+          await handleScannedBarcode(result.text);
+        }
+      });
+    }
+
+    async function handleScannedBarcode(code) {
+      if (isProcessingBarcode) return;
+
+      const barcode = String(code).trim();
+
+      if (!barcode || barcode.length < 8) return;
+
+      isProcessingBarcode = true;
+
+      document.getElementById("manualBarcode").value = barcode;
+
+      if (navigator.vibrate) {
+        navigator.vibrate(120);
+      }
+
+      setStatus("Stregkode læst: " + barcode);
+      stopScanner();
+
+      await lookupBarcode(barcode);
+    }
+
+    function stopScanner() {
+      if (scanTimer) {
+        clearInterval(scanTimer);
+        scanTimer = null;
+      }
+
+      if (codeReader) {
+        try { codeReader.reset(); } catch (e) {}
         codeReader = null;
       }
 
@@ -421,8 +440,9 @@
         currentTrack = null;
       }
 
-      document.getElementById("cameraControls").style.display = "none";
+      nativeDetector = null;
       torchOn = false;
+      document.getElementById("cameraControls").style.display = "none";
     }
 
     function setupCameraControls() {
@@ -437,28 +457,28 @@
       }
 
       const capabilities = currentTrack.getCapabilities();
-      let hasUsefulControl = false;
+      let showControls = false;
 
       if (capabilities.zoom) {
         zoomSlider.min = capabilities.zoom.min;
         zoomSlider.max = capabilities.zoom.max;
         zoomSlider.step = capabilities.zoom.step || 0.1;
         zoomSlider.value = capabilities.zoom.min;
-        zoomText.innerText = "Træk for at zoome ind på stregkoden.";
+        zoomText.innerText = "Træk mod højre for at zoome ind.";
         zoomSlider.parentElement.style.display = "block";
-        hasUsefulControl = true;
+        showControls = true;
       } else {
         zoomSlider.parentElement.style.display = "none";
       }
 
       if (capabilities.torch) {
         torchButton.style.display = "inline-flex";
-        hasUsefulControl = true;
+        showControls = true;
       } else {
         torchButton.style.display = "none";
       }
 
-      controls.style.display = hasUsefulControl ? "block" : "none";
+      controls.style.display = showControls ? "block" : "none";
     }
 
     async function setZoom(value) {
@@ -469,10 +489,12 @@
           advanced: [{ zoom: Number(value) }]
         });
 
-        document.getElementById("zoomText").innerText = "Zoom: " + Number(value).toFixed(1) + "x";
+        document.getElementById("zoomText").innerText =
+          "Zoom: " + Number(value).toFixed(1) + "x";
       } catch (error) {
         console.error(error);
-        document.getElementById("zoomText").innerText = "Zoom understøttes ikke på denne telefon/browser.";
+        document.getElementById("zoomText").innerText =
+          "Zoom understøttes ikke på denne telefon/browser.";
       }
     }
 
@@ -481,11 +503,13 @@
 
       try {
         torchOn = !torchOn;
+
         await currentTrack.applyConstraints({
           advanced: [{ torch: torchOn }]
         });
 
-        document.getElementById("torchButton").innerText = torchOn ? "Sluk lys" : "Tænd lys";
+        document.getElementById("torchButton").innerText =
+          torchOn ? "Sluk lys" : "Tænd lys";
       } catch (error) {
         console.error(error);
         setStatus("Lys understøttes desværre ikke på denne telefon/browser.");
@@ -545,7 +569,6 @@
           return;
         }
 
-        const luckyUrl = buildGoogleLuckyUrl(searchText);
         const googleUrl = buildGoogleSearchUrl(searchText);
         const nemligUrl = buildNemligSearchUrl(searchText);
 
@@ -573,15 +596,11 @@
             </div>
 
             <p class="small">
-              Start med “Gå direkte til bedste bud”. Hvis Google ikke sender dig direkte til det rigtige produkt, så brug Google-søgningen nedenunder.
+              Brug “Søg via Google”. Hvis Nemlig-appen åbner forkert, så hold fingeren på Google-resultatet og vælg “Åbn i ny fane”.
             </p>
 
             <div class="button-row">
-              <a class="button-link yellow" href="${luckyUrl}" target="_blank" rel="noopener">
-                Gå direkte til bedste bud
-              </a>
-
-              <a class="button-link" href="${googleUrl}" target="_blank" rel="noopener">
+              <a class="button-link yellow" href="${googleUrl}" target="_blank" rel="noopener">
                 Søg via Google
               </a>
 
@@ -592,7 +611,7 @@
           </section>
         `;
 
-        setStatus("Færdig. Brug helst “Gå direkte til bedste bud”.");
+        setStatus("Færdig. Produktet er fundet.");
       } catch (error) {
         console.error(error);
         showFallbackResult(barcode);
@@ -603,7 +622,6 @@
       const resultDiv = document.getElementById("result");
 
       const googleUrl = buildGoogleSearchUrl(barcode);
-      const luckyUrl = buildGoogleLuckyUrl(barcode);
       const nemligUrl = buildNemligSearchUrl(barcode);
 
       resultDiv.innerHTML = `
@@ -611,7 +629,7 @@
           <div class="result-title">Produktet blev ikke fundet automatisk</div>
 
           <p>
-            Open Food Facts havde ikke nok data om produktet. Du kan stadig prøve at søge på stregkoden.
+            Open Food Facts havde ikke nok data om produktet. Du kan stadig søge på stregkoden.
           </p>
 
           <div class="product-grid">
@@ -622,11 +640,7 @@
           </div>
 
           <div class="button-row">
-            <a class="button-link yellow" href="${luckyUrl}" target="_blank" rel="noopener">
-              Gå direkte til bedste bud
-            </a>
-
-            <a class="button-link" href="${googleUrl}" target="_blank" rel="noopener">
+            <a class="button-link yellow" href="${googleUrl}" target="_blank" rel="noopener">
               Søg via Google
             </a>
 
