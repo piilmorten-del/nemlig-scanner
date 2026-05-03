@@ -25,74 +25,47 @@
       box-shadow: 0 8px 30px rgba(0,0,0,0.08);
     }
 
-    h1 {
-      margin-top: 0;
-      font-size: 26px;
-    }
+    h1 { margin-top: 0; }
 
     button {
       background: #111;
       color: white;
       border: none;
-      padding: 14px 18px;
+      padding: 14px;
       border-radius: 10px;
-      font-size: 16px;
       cursor: pointer;
-      margin: 6px 0;
-    }
-
-    button.secondary {
-      background: #e5e7eb;
-      color: #111;
+      margin-top: 10px;
     }
 
     input {
       width: 100%;
-      box-sizing: border-box;
-      padding: 14px;
-      border: 1px solid #ccc;
+      padding: 12px;
+      margin-top: 10px;
       border-radius: 10px;
-      font-size: 16px;
-      margin: 8px 0;
+      border: 1px solid #ccc;
     }
 
     video {
       width: 100%;
-      border-radius: 14px;
-      background: #000;
-      margin: 14px 0;
+      margin-top: 10px;
+      border-radius: 10px;
     }
 
     .box {
       background: #f1f5f9;
-      padding: 14px;
-      border-radius: 12px;
-      margin-top: 14px;
-    }
-
-    .muted {
-      color: #666;
-      font-size: 14px;
-    }
-
-    .result-title {
-      font-weight: bold;
-      font-size: 18px;
-    }
-
-    a.button-link {
-      display: inline-block;
-      background: #111;
-      color: white;
-      text-decoration: none;
-      padding: 14px 18px;
+      padding: 12px;
       border-radius: 10px;
       margin-top: 10px;
     }
 
-    .warning {
-      background: #fff7ed;
-      border: 1px solid #fed7aa;
+    a {
+      display: inline-block;
+      margin-top: 10px;
+      text-decoration: none;
+      background: #111;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
     }
   </style>
 </head>
@@ -101,180 +74,103 @@
   <div class="app">
     <h1>Nemlig Scanner</h1>
 
-    <p>
-      Scan en stregkode. Appen forsøger først at finde produktet i Open Food Facts
-      og laver derefter en søgning på nemlig.com.
-    </p>
-
-    <div class="box warning">
-      <strong>Vigtigt:</strong>
-      Match på nemlig.com er kun et bedste gæt, fordi vi ikke har adgang til nemligs interne EAN-data.
-    </div>
-
-    <h2>Scan med kamera</h2>
     <button onclick="startScanner()">Start scanning</button>
-    <button class="secondary" onclick="stopScanner()">Stop scanning</button>
+    <button onclick="stopScanner()">Stop</button>
 
-    <video id="video" muted playsinline></video>
+    <video id="video"></video>
 
-    <h2>Eller indtast stregkode manuelt</h2>
-    <input id="manualBarcode" placeholder="Skriv fx 5711953070205" />
+    <input id="manualBarcode" placeholder="Indtast stregkode" />
     <button onclick="lookupManualBarcode()">Find produkt</button>
 
-    <div id="status" class="box muted">
-      Klar til scanning.
-    </div>
-
+    <div id="status" class="box">Klar</div>
     <div id="result"></div>
   </div>
 
   <script>
-    let codeReader = null;
+    let codeReader;
 
     function setStatus(text) {
       document.getElementById("status").innerText = text;
     }
 
-    function cleanText(value) {
-      if (!value) return "";
-      return String(value).trim();
-    }
-
     function buildNemligSearchUrl(searchText) {
-      return "https://www.nemlig.com/soegning/" + encodeURIComponent(searchText);
+      const cleaned = searchText
+        .replace(/\b\d{13}\b/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      return "https://www.google.com/search?q=" + encodeURIComponent("site:nemlig.com " + cleaned);
     }
 
     async function startScanner() {
-      try {
-        setStatus("Starter kamera...");
+      codeReader = new ZXing.BrowserMultiFormatReader();
 
-        codeReader = new ZXing.BrowserMultiFormatReader();
-
-        await codeReader.decodeFromVideoDevice(null, "video", async function(result, error) {
-          if (result) {
-            const barcode = result.text;
-            stopScanner();
-            setStatus("Stregkode fundet: " + barcode);
-            await lookupBarcode(barcode);
-          }
-        });
-      } catch (error) {
-        console.error(error);
-        setStatus("Kameraet kunne ikke startes. Prøv at åbne siden via HTTPS, fx GitHub Pages.");
-      }
+      codeReader.decodeFromVideoDevice(null, "video", async (result, err) => {
+        if (result) {
+          stopScanner();
+          await lookupBarcode(result.text);
+        }
+      });
     }
 
     function stopScanner() {
-      if (codeReader) {
-        codeReader.reset();
-        codeReader = null;
-      }
-      setStatus("Scanning stoppet.");
+      if (codeReader) codeReader.reset();
     }
 
     async function lookupManualBarcode() {
-      const barcode = document.getElementById("manualBarcode").value.trim();
-
-      if (!barcode) {
-        setStatus("Skriv en stregkode først.");
-        return;
-      }
-
-      await lookupBarcode(barcode);
+      const code = document.getElementById("manualBarcode").value;
+      await lookupBarcode(code);
     }
 
     async function lookupBarcode(barcode) {
-      const resultDiv = document.getElementById("result");
-      resultDiv.innerHTML = "";
-
-      setStatus("Slår stregkode op...");
+      setStatus("Slår op...");
+      document.getElementById("result").innerHTML = "";
 
       try {
-        const url = "https://world.openfoodfacts.org/api/v2/product/" + encodeURIComponent(barcode) + ".json";
-        const response = await fetch(url);
-        const data = await response.json();
+        const res = await fetch("https://world.openfoodfacts.org/api/v2/product/" + barcode + ".json");
+        const data = await res.json();
 
-        if (!data || data.status !== 1 || !data.product) {
-          showFallbackResult(barcode);
+        if (data.status !== 1) {
+          showFallback(barcode);
           return;
         }
 
-        const product = data.product;
+        const p = data.product;
 
-        const brand = cleanText(product.brands);
-        const name =
-          cleanText(product.product_name_da) ||
-          cleanText(product.product_name) ||
-          cleanText(product.generic_name_da) ||
-          cleanText(product.generic_name);
+        const name = p.product_name || "";
+        const brand = p.brands || "";
+        const quantity = p.quantity || "";
 
-        const quantity = cleanText(product.quantity);
+        const search = `${brand} ${name} ${quantity}`.trim();
 
-        const searchParts = [brand, name, quantity].filter(Boolean);
-        const searchText = searchParts.join(" ");
+        const url = buildNemligSearchUrl(search);
 
-        if (!searchText) {
-          showFallbackResult(barcode);
-          return;
-        }
-
-        const nemligUrl = buildNemligSearchUrl(searchText);
-
-        resultDiv.innerHTML = `
+        document.getElementById("result").innerHTML = `
           <div class="box">
-            <div class="result-title">Produkt fundet</div>
-            <p><strong>Stregkode:</strong> ${escapeHtml(barcode)}</p>
-            <p><strong>Brand:</strong> ${escapeHtml(brand || "Ukendt")}</p>
-            <p><strong>Produkt:</strong> ${escapeHtml(name || "Ukendt")}</p>
-            <p><strong>Størrelse:</strong> ${escapeHtml(quantity || "Ukendt")}</p>
-
-            <p class="muted">
-              Søgningen på nemlig.com er lavet ud fra produktnavn, brand og størrelse.
-            </p>
-
-            <a class="button-link" href="${nemligUrl}" target="_blank" rel="noopener">
-              Find bedste match på nemlig.com
-            </a>
+            <b>Produkt:</b> ${name}<br>
+            <b>Brand:</b> ${brand}<br>
+            <b>Størrelse:</b> ${quantity}<br>
+            <a href="${url}" target="_blank">Find på nemlig.com</a>
           </div>
         `;
 
-        setStatus("Færdig. Tryk på knappen for at se bedste match på nemlig.com.");
-      } catch (error) {
-        console.error(error);
-        showFallbackResult(barcode);
+        setStatus("Fundet");
+      } catch (e) {
+        showFallback(barcode);
       }
     }
 
-    function showFallbackResult(barcode) {
-      const resultDiv = document.getElementById("result");
+    function showFallback(barcode) {
+      const url = buildNemligSearchUrl(barcode);
 
-      const nemligUrl = buildNemligSearchUrl(barcode);
-
-      resultDiv.innerHTML = `
+      document.getElementById("result").innerHTML = `
         <div class="box">
-          <div class="result-title">Produktet blev ikke fundet automatisk</div>
-          <p><strong>Stregkode:</strong> ${escapeHtml(barcode)}</p>
-          <p>
-            Open Food Facts havde ikke nok data om produktet.
-            Du kan stadig prøve at søge på stregkoden hos nemlig.com.
-          </p>
-
-          <a class="button-link" href="${nemligUrl}" target="_blank" rel="noopener">
-            Søg på nemlig.com
-          </a>
+          Produkt ikke fundet automatisk.<br>
+          <a href="${url}" target="_blank">Søg manuelt</a>
         </div>
       `;
 
-      setStatus("Produktet blev ikke fundet automatisk.");
-    }
-
-    function escapeHtml(text) {
-      return String(text)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+      setStatus("Ikke fundet");
     }
   </script>
 </body>
