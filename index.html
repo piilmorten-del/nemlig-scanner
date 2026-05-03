@@ -1,162 +1,812 @@
 <!doctype html>
 <html lang="da">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Nemlig Scanner</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nemlig Scanner</title>
 
-<script src="https://unpkg.com/@zxing/library@latest"></script>
-<script src="https://unpkg.com/tesseract.js@v4.0.2/dist/tesseract.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <script src="https://unpkg.com/tesseract.js@v4.0.2/dist/tesseract.min.js"></script>
 
-<style>
-/* (samme styling som før – forkortet her for læsbarhed) */
-body { font-family: Arial; background:#f7f7f3; margin:0; padding:14px; }
-.card { background:white; padding:16px; border-radius:16px; margin-bottom:12px; }
-button { padding:14px; border-radius:12px; border:0; background:#00a651; color:white; font-weight:bold; }
-.secondary { background:#ddd; color:black; }
-input { width:100%; padding:14px; margin-top:8px; border-radius:12px; border:1px solid #ccc; }
-video, canvas { width:100%; margin-top:10px; border-radius:12px; }
-</style>
+  <style>
+    :root {
+      --green: #00a651;
+      --dark-green: #007a3d;
+      --light-green: #eaf8f0;
+      --yellow: #ffd84d;
+      --bg: #f7f7f3;
+      --text: #172017;
+      --muted: #667066;
+      --card: #ffffff;
+      --border: #dfe6dc;
+      --shadow: 0 12px 35px rgba(0,0,0,0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .page { min-height: 100vh; padding: 14px; }
+    .app { max-width: 760px; margin: 0 auto; }
+
+    .header {
+      background: linear-gradient(135deg, var(--green), var(--dark-green));
+      color: white;
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      color: var(--green);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .logo-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--yellow);
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    h1 { margin: 0 0 8px; font-size: 30px; }
+    h2 { margin: 22px 0 10px; font-size: 19px; }
+    p { line-height: 1.45; }
+    .header p { margin: 0; color: rgba(255,255,255,0.92); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .notice {
+      background: var(--light-green);
+      border: 1px solid #bfe8cf;
+      color: #164b2c;
+      border-radius: 16px;
+      padding: 13px;
+      font-size: 14px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button, .button-link {
+      border: 0;
+      background: var(--green);
+      color: white;
+      padding: 14px 16px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 48px;
+    }
+
+    button:hover, .button-link:hover { background: var(--dark-green); }
+
+    .secondary {
+      background: #edf1ec;
+      color: var(--text);
+    }
+
+    .secondary:hover { background: #dfe6dc; }
+
+    .yellow {
+      background: var(--yellow);
+      color: #1b1b1b;
+    }
+
+    .yellow:hover { background: #f0c800; }
+
+    input, textarea {
+      width: 100%;
+      padding: 15px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      font-size: 17px;
+      margin-top: 8px;
+      background: white;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .video-wrap {
+      position: relative;
+      margin-top: 12px;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 18px;
+      background: #111;
+      border: 1px solid var(--border);
+      max-height: 460px;
+      object-fit: cover;
+    }
+
+    .scan-frame {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      top: 38%;
+      height: 24%;
+      border: 3px solid var(--yellow);
+      border-radius: 14px;
+      pointer-events: none;
+    }
+
+    .status {
+      background: #fff;
+      border: 1px dashed var(--border);
+      padding: 13px;
+      border-radius: 14px;
+      color: var(--muted);
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .controls {
+      display: none;
+      margin-top: 12px;
+      background: #f4f8f3;
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 14px;
+      margin: 12px 0 6px;
+    }
+
+    input[type="range"] { padding: 0; margin: 0; }
+
+    .result-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    canvas {
+      display: none;
+    }
+
+    @media (max-width: 520px) {
+      .page { padding: 10px; }
+      .header, .card { border-radius: 18px; }
+      h1 { font-size: 26px; }
+      button, .button-link { width: 100%; }
+    }
+  </style>
 </head>
 
 <body>
+  <main class="page">
+    <div class="app">
+      <section class="header">
+        <div class="logo">nemlig<span class="logo-dot"></span>scanner</div>
+        <h1>Scan en vare og find den hos nemlig.com</h1>
+        <p>Scan stregkoden, skriv den manuelt eller tag et billede af produktet.</p>
+      </section>
 
-<div class="card">
-  <h2>1. Scan stregkode</h2>
-  <button onclick="startScanner()">Start scanning</button>
-  <button class="secondary" onclick="stopScanner()">Stop</button>
-  <video id="video" playsinline muted></video>
-</div>
+      <section class="card">
+        <div class="notice">
+          <strong>Prototype:</strong> Appen bruger åbne produktdata, OCR og Google-søgning. Du kan selv rette brand, produkt, størrelse og ekstra søgeord.
+        </div>
 
-<div class="card">
-  <h2>2. Tag billede af produkt</h2>
-  <button onclick="startCameraForPhoto()">Tag billede</button>
-  <button class="secondary" onclick="takePhoto()">Tag snapshot</button>
-  <video id="photoVideo" playsinline muted></video>
-  <canvas id="canvas"></canvas>
-  <div id="ocrStatus"></div>
-</div>
+        <h2>1. Scan stregkode</h2>
 
-<div class="card">
-  <h2>3. Manuel indtastning</h2>
-  <input id="manualBarcode" placeholder="Stregkode" />
-  <button onclick="lookupManualBarcode()">Find produkt</button>
-</div>
+        <div class="button-row">
+          <button onclick="startScanner()">Start scanning</button>
+          <button class="secondary" onclick="stopScanner()">Stop scanning</button>
+        </div>
 
-<div id="result"></div>
+        <div class="video-wrap">
+          <video id="video" muted playsinline></video>
+          <div class="scan-frame"></div>
+        </div>
 
-<script>
-let codeReader;
-let photoStream;
+        <div id="cameraControls" class="controls">
+          <label for="zoomSlider">Zoom</label>
+          <input id="zoomSlider" type="range" min="1" max="1" step="0.1" value="1" oninput="setZoom(this.value)" />
+          <div class="small" id="zoomText">Zoom ikke aktiv endnu</div>
 
-// ENTER = søg
-document.getElementById("manualBarcode").addEventListener("keydown", e => {
-  if (e.key === "Enter") lookupManualBarcode();
-});
+          <div class="button-row">
+            <button id="torchButton" class="secondary" onclick="toggleTorch()">Tænd/sluk lys</button>
+          </div>
+        </div>
 
-// -------- STREGKODE --------
-async function startScanner() {
-  codeReader = new ZXing.BrowserMultiFormatReader();
-  await codeReader.decodeFromVideoDevice(null, "video", (res) => {
-    if (res) {
-      stopScanner();
-      lookupBarcode(res.text);
-    }
-  });
-}
+        <div id="status" class="status">Klar til scanning.</div>
 
-function stopScanner() {
-  if (codeReader) codeReader.reset();
-}
+        <h2>2. Indtast stregkode manuelt</h2>
+        <input id="manualBarcode" placeholder="Indtast stregkode, fx 5711953070205" inputmode="numeric" />
+        <div class="button-row">
+          <button onclick="lookupManualBarcode()">Find produkt</button>
+        </div>
 
-// -------- FOTO --------
-async function startCameraForPhoto() {
-  photoStream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: "environment" }
-  });
-  document.getElementById("photoVideo").srcObject = photoStream;
-}
+        <h2>3. Tag billede af produkt</h2>
+        <p class="small">
+          Brug denne, hvis stregkoden ikke virker. Tag et billede af forsiden af produktet, så forsøger appen at læse teksten.
+        </p>
 
-async function takePhoto() {
-  const video = document.getElementById("photoVideo");
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
+        <div class="button-row">
+          <button onclick="startPhotoCamera()">Start kamera til billede</button>
+          <button class="secondary" onclick="takeProductPhoto()">Tag billede og læs tekst</button>
+          <button class="secondary" onclick="stopPhotoCamera()">Stop billedkamera</button>
+        </div>
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ctx.drawImage(video, 0, 0);
+        <div class="video-wrap">
+          <video id="photoVideo" muted playsinline></video>
+        </div>
 
-  document.getElementById("ocrStatus").innerText = "Læser tekst...";
+        <canvas id="photoCanvas"></canvas>
 
-  const result = await Tesseract.recognize(canvas, 'dan+eng');
+        <div id="ocrStatus" class="status">Klar til billedgenkendelse.</div>
+      </section>
 
-  const text = result.data.text;
-
-  document.getElementById("ocrStatus").innerText = "Tekst fundet";
-
-  fillEditableFields("", "", text.split("\n")[0], "", "");
-}
-
-// -------- DATA --------
-async function lookupManualBarcode() {
-  const code = document.getElementById("manualBarcode").value;
-  lookupBarcode(code);
-}
-
-async function lookupBarcode(barcode) {
-  const res = await fetch("https://world.openfoodfacts.org/api/v2/product/" + barcode + ".json");
-  const data = await res.json();
-
-  if (data.status === 1) {
-    const p = data.product;
-
-    fillEditableFields(
-      barcode,
-      p.brands || "",
-      p.product_name || "",
-      p.quantity || "",
-      ""
-    );
-  } else {
-    fillEditableFields(barcode, "", "", "", "");
-  }
-}
-
-// -------- FELTER --------
-function fillEditableFields(barcode, brand, product, size, extra) {
-  document.getElementById("result").innerHTML = `
-    <div class="card">
-      <input id="editBrand" placeholder="Brand" value="${brand}">
-      <input id="editProduct" placeholder="Produkt" value="${product}">
-      <input id="editSize" placeholder="Størrelse" value="${size}">
-      <input id="editExtra" placeholder="Ekstra søgeord" value="${extra}">
-
-      <button onclick="openBest()">Gå direkte til bedste bud</button>
-      <button onclick="openGoogle()">Søg via Google</button>
+      <section id="result"></section>
     </div>
-  `;
+  </main>
 
-  document.getElementById("result").scrollIntoView({behavior:"smooth"});
-}
+  <script>
+    let codeReader = null;
+    let currentStream = null;
+    let currentTrack = null;
+    let torchOn = false;
+    let nativeDetector = null;
+    let scanTimer = null;
+    let isProcessingBarcode = false;
+    let photoStream = null;
 
-// -------- SØGNING --------
-function getSearch() {
-  return [
-    document.getElementById("editBrand").value,
-    document.getElementById("editProduct").value,
-    document.getElementById("editSize").value,
-    document.getElementById("editExtra").value
-  ].join(" ");
-}
+    document.addEventListener("DOMContentLoaded", function() {
+      document.getElementById("manualBarcode").addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          lookupManualBarcode();
+        }
+      });
+    });
 
-function openBest() {
-  window.open("https://www.google.com/search?btnI=1&q=" + encodeURIComponent("site:nemlig.com " + getSearch()));
-}
+    function setStatus(text) {
+      document.getElementById("status").innerText = text;
+    }
 
-function openGoogle() {
-  window.open("https://www.google.com/search?q=" + encodeURIComponent("site:nemlig.com " + getSearch()));
-}
-</script>
+    function setOcrStatus(text) {
+      document.getElementById("ocrStatus").innerText = text;
+    }
 
+    function cleanText(value) {
+      if (!value) return "";
+      return String(value).trim();
+    }
+
+    function cleanSearchText(text) {
+      return String(text || "")
+        .replace(/\bøkologisk\b/gi, "øko")
+        .replace(/\bgram\b/gi, "g")
+        .replace(/\bliter\b/gi, "l")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function cleanOcrText(text) {
+      return String(text || "")
+        .split("\n")
+        .map(line => line.trim())
+        .filter(line => line.length > 2)
+        .filter(line => !/ingredienser/i.test(line))
+        .filter(line => !/næringsindhold/i.test(line))
+        .filter(line => !/bedst før/i.test(line))
+        .filter(line => !/opbevares/i.test(line))
+        .filter(line => !/produceret/i.test(line))
+        .filter(line => !/www\./i.test(line))
+        .slice(0, 8)
+        .join(" ");
+    }
+
+    function getCurrentSearchText() {
+      const brand = document.getElementById("editBrand")?.value || "";
+      const product = document.getElementById("editProduct")?.value || "";
+      const size = document.getElementById("editSize")?.value || "";
+      const extra = document.getElementById("editExtra")?.value || "";
+
+      return cleanSearchText([brand, product, size, extra].filter(Boolean).join(" "));
+    }
+
+    function buildGoogleSearchUrl(searchText) {
+      return "https://www.google.com/search?q=" +
+        encodeURIComponent("site:nemlig.com " + cleanSearchText(searchText));
+    }
+
+    function buildGoogleLuckyUrl(searchText) {
+      return "https://www.google.com/search?btnI=1&q=" +
+        encodeURIComponent("site:nemlig.com " + cleanSearchText(searchText));
+    }
+
+    function openBestGuess() {
+      const searchText = getCurrentSearchText();
+      if (!searchText) {
+        setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
+        return;
+      }
+      window.open(buildGoogleLuckyUrl(searchText), "_blank", "noopener");
+    }
+
+    function openGoogleSearch() {
+      const searchText = getCurrentSearchText();
+      if (!searchText) {
+        setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
+        return;
+      }
+      window.open(buildGoogleSearchUrl(searchText), "_blank", "noopener");
+    }
+
+    async function startScanner() {
+      try {
+        stopScanner();
+        setStatus("Starter kamera...");
+
+        const constraints = {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        };
+
+        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        const video = document.getElementById("video");
+        video.srcObject = currentStream;
+        await video.play();
+
+        currentTrack = currentStream.getVideoTracks()[0];
+        setupCameraControls();
+
+        isProcessingBarcode = false;
+
+        if ("BarcodeDetector" in window) {
+          nativeDetector = new BarcodeDetector({
+            formats: ["ean_13", "ean_8", "upc_a", "upc_e"]
+          });
+
+          startNativeScanLoop();
+          setStatus("Scanner med mobilens indbyggede stregkodelæser. Hold stregkoden inden for den gule ramme.");
+        } else {
+          startZXingScanner(video);
+          setStatus("Scanner med fallback-læser. Hold stregkoden roligt inden for den gule ramme.");
+        }
+      } catch (error) {
+        console.error(error);
+        setStatus("Kameraet kunne ikke startes. Tjek at siden åbnes via HTTPS, og at kameraadgang er tilladt.");
+      }
+    }
+
+    function startNativeScanLoop() {
+      const video = document.getElementById("video");
+
+      scanTimer = setInterval(async function() {
+        if (!nativeDetector || isProcessingBarcode || video.readyState < 2) return;
+
+        try {
+          const barcodes = await nativeDetector.detect(video);
+
+          if (barcodes && barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+
+            if (code) {
+              await handleScannedBarcode(code);
+            }
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }, 250);
+    }
+
+    function startZXingScanner(video) {
+      const hints = new Map();
+      const formats = [
+        ZXing.BarcodeFormat.EAN_13,
+        ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.UPC_A,
+        ZXing.BarcodeFormat.UPC_E
+      ];
+
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+      codeReader = new ZXing.BrowserMultiFormatReader(hints, 300);
+
+      codeReader.decodeFromVideoElement(video, async function(result, error) {
+        if (result && result.text) {
+          await handleScannedBarcode(result.text);
+        }
+      });
+    }
+
+    async function handleScannedBarcode(code) {
+      if (isProcessingBarcode) return;
+
+      const barcode = String(code).trim();
+
+      if (!barcode || barcode.length < 8) return;
+
+      isProcessingBarcode = true;
+
+      document.getElementById("manualBarcode").value = barcode;
+
+      if (navigator.vibrate) {
+        navigator.vibrate(120);
+      }
+
+      setStatus("Stregkode læst: " + barcode);
+      stopScanner();
+
+      await lookupBarcode(barcode);
+    }
+
+    function stopScanner() {
+      if (scanTimer) {
+        clearInterval(scanTimer);
+        scanTimer = null;
+      }
+
+      if (codeReader) {
+        try { codeReader.reset(); } catch (e) {}
+        codeReader = null;
+      }
+
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        currentStream = null;
+        currentTrack = null;
+      }
+
+      nativeDetector = null;
+      torchOn = false;
+      document.getElementById("cameraControls").style.display = "none";
+    }
+
+    function setupCameraControls() {
+      const controls = document.getElementById("cameraControls");
+      const zoomSlider = document.getElementById("zoomSlider");
+      const zoomText = document.getElementById("zoomText");
+      const torchButton = document.getElementById("torchButton");
+
+      if (!currentTrack || !currentTrack.getCapabilities) {
+        controls.style.display = "none";
+        return;
+      }
+
+      const capabilities = currentTrack.getCapabilities();
+      let showControls = false;
+
+      if (capabilities.zoom) {
+        zoomSlider.min = capabilities.zoom.min;
+        zoomSlider.max = capabilities.zoom.max;
+        zoomSlider.step = capabilities.zoom.step || 0.1;
+        zoomSlider.value = capabilities.zoom.min;
+        zoomText.innerText = "Træk mod højre for at zoome ind.";
+        zoomSlider.parentElement.style.display = "block";
+        showControls = true;
+      } else {
+        zoomSlider.parentElement.style.display = "none";
+      }
+
+      if (capabilities.torch) {
+        torchButton.style.display = "inline-flex";
+        showControls = true;
+      } else {
+        torchButton.style.display = "none";
+      }
+
+      controls.style.display = showControls ? "block" : "none";
+    }
+
+    async function setZoom(value) {
+      if (!currentTrack) return;
+
+      try {
+        await currentTrack.applyConstraints({
+          advanced: [{ zoom: Number(value) }]
+        });
+
+        document.getElementById("zoomText").innerText =
+          "Zoom: " + Number(value).toFixed(1) + "x";
+      } catch (error) {
+        console.error(error);
+        document.getElementById("zoomText").innerText =
+          "Zoom understøttes ikke på denne telefon/browser.";
+      }
+    }
+
+    async function toggleTorch() {
+      if (!currentTrack) return;
+
+      try {
+        torchOn = !torchOn;
+
+        await currentTrack.applyConstraints({
+          advanced: [{ torch: torchOn }]
+        });
+
+        document.getElementById("torchButton").innerText =
+          torchOn ? "Sluk lys" : "Tænd lys";
+      } catch (error) {
+        console.error(error);
+        setStatus("Lys understøttes desværre ikke på denne telefon/browser.");
+      }
+    }
+
+    async function lookupManualBarcode() {
+      const barcode = document.getElementById("manualBarcode").value.trim();
+
+      if (!barcode) {
+        setStatus("Skriv en stregkode først.");
+        return;
+      }
+
+      await lookupBarcode(barcode);
+    }
+
+    async function lookupBarcode(barcode) {
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "";
+
+      setStatus("Slår stregkode op...");
+
+      try {
+        const openFoodFactsUrl =
+          "https://world.openfoodfacts.org/api/v2/product/" +
+          encodeURIComponent(barcode) +
+          ".json";
+
+        const response = await fetch(openFoodFactsUrl);
+        const data = await response.json();
+
+        if (!data || data.status !== 1 || !data.product) {
+          showEditableResult({
+            barcode: barcode,
+            brand: "",
+            product: "",
+            size: "",
+            extra: ""
+          }, "Produktet blev ikke fundet automatisk");
+          return;
+        }
+
+        const product = data.product;
+
+        const brand = cleanText(product.brands);
+        const name =
+          cleanText(product.product_name_da) ||
+          cleanText(product.product_name) ||
+          cleanText(product.generic_name_da) ||
+          cleanText(product.generic_name);
+
+        const quantity = cleanText(product.quantity);
+
+        showEditableResult({
+          barcode: barcode,
+          brand: brand,
+          product: name,
+          size: quantity,
+          extra: ""
+        }, "Produkt fundet");
+
+        setStatus("Færdig. Ret felterne, hvis du vil forbedre søgningen.");
+      } catch (error) {
+        console.error(error);
+        showEditableResult({
+          barcode: barcode,
+          brand: "",
+          product: "",
+          size: "",
+          extra: ""
+        }, "Produktet blev ikke fundet automatisk");
+      }
+    }
+
+    async function startPhotoCamera() {
+      try {
+        stopPhotoCamera();
+        setOcrStatus("Starter kamera til billede...");
+
+        photoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+
+        const video = document.getElementById("photoVideo");
+        video.srcObject = photoStream;
+        await video.play();
+
+        setOcrStatus("Kamera klar. Hold produktets forside tydeligt i billedet og tryk “Tag billede og læs tekst”.");
+      } catch (error) {
+        console.error(error);
+        setOcrStatus("Billedkameraet kunne ikke startes. Tjek kameraadgang.");
+      }
+    }
+
+    function stopPhotoCamera() {
+      if (photoStream) {
+        photoStream.getTracks().forEach(track => track.stop());
+        photoStream = null;
+      }
+
+      const video = document.getElementById("photoVideo");
+      video.srcObject = null;
+    }
+
+    async function takeProductPhoto() {
+      const video = document.getElementById("photoVideo");
+      const canvas = document.getElementById("photoCanvas");
+
+      if (!photoStream || video.readyState < 2) {
+        setOcrStatus("Start kameraet til billede først.");
+        return;
+      }
+
+      setOcrStatus("Tager billede...");
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const context = canvas.getContext("2d");
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      setOcrStatus("Læser tekst fra billedet. Det kan tage 5-15 sekunder...");
+
+      try {
+        const result = await Tesseract.recognize(canvas, "dan+eng");
+        const rawText = result.data.text || "";
+        const cleaned = cleanOcrText(rawText);
+
+        if (!cleaned) {
+          showEditableResult({
+            barcode: "",
+            brand: "",
+            product: "",
+            size: "",
+            extra: ""
+          }, "Kunne ikke læse tydelig tekst");
+
+          setOcrStatus("Kunne ikke læse tydelig tekst. Prøv et skarpere billede tættere på forsiden.");
+          return;
+        }
+
+        showEditableResult({
+          barcode: "",
+          brand: "",
+          product: cleaned,
+          size: "",
+          extra: ""
+        }, "Tekst fundet fra billede");
+
+        setOcrStatus("Tekst fundet. Ret felterne, så søgningen bliver mere præcis.");
+        stopPhotoCamera();
+      } catch (error) {
+        console.error(error);
+        setOcrStatus("OCR fejlede. Prøv igen med bedre lys og tydeligere tekst.");
+      }
+    }
+
+    function scrollToResult() {
+      setTimeout(function() {
+        const result = document.getElementById("result");
+        if (result) {
+          result.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+        }
+      }, 150);
+    }
+
+    function showEditableResult(values, title) {
+      const resultDiv = document.getElementById("result");
+
+      resultDiv.innerHTML = `
+        <section class="card">
+          <div class="result-title">${escapeHtml(title)}</div>
+
+          <p class="small">
+            Ret felterne, hvis produktdata er mangelfulde. Knapperne bruger de oplysninger, du har skrevet her.
+          </p>
+
+          <label for="editBarcode">Stregkode</label>
+          <input id="editBarcode" value="${escapeAttribute(values.barcode || "")}" inputmode="numeric" />
+
+          <label for="editBrand">Brand</label>
+          <input id="editBrand" value="${escapeAttribute(values.brand || "")}" placeholder="Fx Gestus, Arla, Coop, Urtekram" />
+
+          <label for="editProduct">Produkt</label>
+          <input id="editProduct" value="${escapeAttribute(values.product || "")}" placeholder="Fx jasmin ris, minimælk, havregryn" />
+
+          <label for="editSize">Størrelse</label>
+          <input id="editSize" value="${escapeAttribute(values.size || "")}" placeholder="Fx 1 kg, 1 l, 500 g" />
+
+          <label for="editExtra">Ekstra søgeord</label>
+          <input id="editExtra" value="${escapeAttribute(values.extra || "")}" placeholder="Fx øko, fuldkorn, laktosefri, original" />
+
+          <p class="small">
+            Tip: Jo mere konkret du skriver, jo bedre bliver Google-søgningen. Brand + produkt + størrelse virker typisk bedst.
+          </p>
+
+          <div class="button-row">
+            <button class="yellow" onclick="openBestGuess()">Gå direkte til bedste bud</button>
+            <button onclick="openGoogleSearch()">Søg via Google</button>
+          </div>
+        </section>
+      `;
+
+      scrollToResult();
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttribute(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+  </script>
 </body>
 </html>
