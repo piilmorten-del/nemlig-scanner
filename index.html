@@ -122,6 +122,10 @@
       color: #1b1b1b;
     }
 
+    .yellow:hover {
+      background: #f0c800;
+    }
+
     input {
       width: 100%;
       padding: 15px;
@@ -181,7 +185,7 @@
       display: block;
       font-weight: 700;
       font-size: 14px;
-      margin-bottom: 6px;
+      margin: 12px 0 6px;
     }
 
     input[type="range"] { padding: 0; margin: 0; }
@@ -192,33 +196,10 @@
       margin-bottom: 8px;
     }
 
-    .product-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .product-line {
-      background: #f8faf7;
-      border: 1px solid var(--border);
-      border-radius: 13px;
-      padding: 11px;
-    }
-
-    .product-line strong {
-      display: block;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 3px;
-    }
-
     .small {
       font-size: 13px;
       color: var(--muted);
     }
-
-    canvas { display: none; }
 
     @media (max-width: 520px) {
       .page { padding: 10px; }
@@ -235,12 +216,12 @@
       <section class="header">
         <div class="logo">nemlig<span class="logo-dot"></span>scanner</div>
         <h1>Scan en vare og find den hos nemlig.com</h1>
-        <p>Scan stregkoden eller skriv den manuelt. Appen finder produktdata og hjælper dig videre til bedste match.</p>
+        <p>Scan stregkoden eller skriv den manuelt. Ret selv produktdata, hvis appen ikke finder nok information.</p>
       </section>
 
       <section class="card">
         <div class="notice">
-          <strong>Prototype:</strong> Appen bruger åbne produktdata og Google-søgning. Resultatet er derfor et bedste bud, ikke et garanteret match.
+          <strong>Prototype:</strong> Appen bruger åbne produktdata og Google-søgning. Du kan selv rette brand, produkt, størrelse og ekstra søgeord.
         </div>
 
         <h2>1. Scan med kamera</h2>
@@ -254,8 +235,6 @@
           <video id="video" muted playsinline></video>
           <div class="scan-frame"></div>
         </div>
-
-        <canvas id="canvas"></canvas>
 
         <div id="cameraControls" class="controls">
           <label for="zoomSlider">Zoom</label>
@@ -307,14 +286,56 @@
         .trim();
     }
 
+    function getCurrentSearchText() {
+      const barcode = document.getElementById("editBarcode")?.value || "";
+      const brand = document.getElementById("editBrand")?.value || "";
+      const product = document.getElementById("editProduct")?.value || "";
+      const size = document.getElementById("editSize")?.value || "";
+      const extra = document.getElementById("editExtra")?.value || "";
+
+      return cleanSearchText([brand, product, size, extra].filter(Boolean).join(" "));
+    }
+
     function buildGoogleSearchUrl(searchText) {
       return "https://www.google.com/search?q=" +
+        encodeURIComponent("site:nemlig.com " + cleanSearchText(searchText));
+    }
+
+    function buildGoogleLuckyUrl(searchText) {
+      return "https://www.google.com/search?btnI=1&q=" +
         encodeURIComponent("site:nemlig.com " + cleanSearchText(searchText));
     }
 
     function buildNemligSearchUrl(searchText) {
       return "https://www.nemlig.com/soegning/" +
         encodeURIComponent(cleanSearchText(searchText));
+    }
+
+    function openBestGuess() {
+      const searchText = getCurrentSearchText();
+      if (!searchText) {
+        setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
+        return;
+      }
+      window.open(buildGoogleLuckyUrl(searchText), "_blank", "noopener");
+    }
+
+    function openGoogleSearch() {
+      const searchText = getCurrentSearchText();
+      if (!searchText) {
+        setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
+        return;
+      }
+      window.open(buildGoogleSearchUrl(searchText), "_blank", "noopener");
+    }
+
+    function openNemligSearch() {
+      const searchText = getCurrentSearchText();
+      if (!searchText) {
+        setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
+        return;
+      }
+      window.open(buildNemligSearchUrl(searchText), "_blank", "noopener");
     }
 
     async function startScanner() {
@@ -543,7 +564,13 @@
         const data = await response.json();
 
         if (!data || data.status !== 1 || !data.product) {
-          showFallbackResult(barcode);
+          showEditableResult({
+            barcode: barcode,
+            brand: "",
+            product: "",
+            size: "",
+            extra: ""
+          }, "Produktet blev ikke fundet automatisk");
           return;
         }
 
@@ -558,100 +585,64 @@
 
         const quantity = cleanText(product.quantity);
 
-        const searchText = [brand, name, quantity]
-          .filter(Boolean)
-          .join(" ")
-          .replace(/\s+/g, " ")
-          .trim();
+        showEditableResult({
+          barcode: barcode,
+          brand: brand,
+          product: name,
+          size: quantity,
+          extra: ""
+        }, "Produkt fundet");
 
-        if (!searchText) {
-          showFallbackResult(barcode);
-          return;
-        }
-
-        const googleUrl = buildGoogleSearchUrl(searchText);
-        const nemligUrl = buildNemligSearchUrl(searchText);
-
-        resultDiv.innerHTML = `
-          <section class="card">
-            <div class="result-title">Produkt fundet</div>
-
-            <div class="product-grid">
-              <div class="product-line">
-                <strong>Stregkode</strong>
-                ${escapeHtml(barcode)}
-              </div>
-              <div class="product-line">
-                <strong>Brand</strong>
-                ${escapeHtml(brand || "Ukendt")}
-              </div>
-              <div class="product-line">
-                <strong>Produkt</strong>
-                ${escapeHtml(name || "Ukendt")}
-              </div>
-              <div class="product-line">
-                <strong>Størrelse</strong>
-                ${escapeHtml(quantity || "Ukendt")}
-              </div>
-            </div>
-
-            <p class="small">
-              Brug “Søg via Google”. Hvis Nemlig-appen åbner forkert, så hold fingeren på Google-resultatet og vælg “Åbn i ny fane”.
-            </p>
-
-            <div class="button-row">
-              <a class="button-link yellow" href="${googleUrl}" target="_blank" rel="noopener">
-                Søg via Google
-              </a>
-
-              <a class="button-link secondary" href="${nemligUrl}" target="_blank" rel="noopener">
-                Prøv nemlig-søgning
-              </a>
-            </div>
-          </section>
-        `;
-
-        setStatus("Færdig. Produktet er fundet.");
+        setStatus("Færdig. Ret felterne, hvis du vil forbedre søgningen.");
       } catch (error) {
         console.error(error);
-        showFallbackResult(barcode);
+        showEditableResult({
+          barcode: barcode,
+          brand: "",
+          product: "",
+          size: "",
+          extra: ""
+        }, "Produktet blev ikke fundet automatisk");
       }
     }
 
-    function showFallbackResult(barcode) {
+    function showEditableResult(values, title) {
       const resultDiv = document.getElementById("result");
-
-      const googleUrl = buildGoogleSearchUrl(barcode);
-      const nemligUrl = buildNemligSearchUrl(barcode);
 
       resultDiv.innerHTML = `
         <section class="card">
-          <div class="result-title">Produktet blev ikke fundet automatisk</div>
+          <div class="result-title">${escapeHtml(title)}</div>
 
-          <p>
-            Open Food Facts havde ikke nok data om produktet. Du kan stadig søge på stregkoden.
+          <p class="small">
+            Ret felterne, hvis produktdata er mangelfulde. Knapperne bruger de oplysninger, du har skrevet her.
           </p>
 
-          <div class="product-grid">
-            <div class="product-line">
-              <strong>Stregkode</strong>
-              ${escapeHtml(barcode)}
-            </div>
-          </div>
+          <label for="editBarcode">Stregkode</label>
+          <input id="editBarcode" value="${escapeAttribute(values.barcode || "")}" inputmode="numeric" />
+
+          <label for="editBrand">Brand</label>
+          <input id="editBrand" value="${escapeAttribute(values.brand || "")}" placeholder="Fx Gestus, Arla, Coop, Urtekram" />
+
+          <label for="editProduct">Produkt</label>
+          <input id="editProduct" value="${escapeAttribute(values.product || "")}" placeholder="Fx jasmin ris, minimælk, havregryn" />
+
+          <label for="editSize">Størrelse</label>
+          <input id="editSize" value="${escapeAttribute(values.size || "")}" placeholder="Fx 1 kg, 1 l, 500 g" />
+
+          <label for="editExtra">Ekstra søgeord</label>
+          <input id="editExtra" value="${escapeAttribute(values.extra || "")}" placeholder="Fx øko, fuldkorn, laktosefri, original" />
+
+          <p class="small">
+            Tip: Jo mere konkret du skriver, jo bedre bliver Google-søgningen. Brand + produkt + størrelse virker typisk bedst.
+          </p>
 
           <div class="button-row">
-            <a class="button-link yellow" href="${googleUrl}" target="_blank" rel="noopener">
-              Søg via Google
-            </a>
-
-            <a class="button-link secondary" href="${nemligUrl}" target="_blank" rel="noopener">
-              Prøv nemlig-søgning
-            </a>
+            <button class="yellow" onclick="openBestGuess()">Gå direkte til bedste bud</button>
+            <button onclick="openGoogleSearch()">Søg via Google</button>
+            <button class="secondary" onclick="openNemligSearch()">Prøv nemlig-søgning</button>
           </div>
         </section>
       `;
-
-      setStatus("Produktet blev ikke fundet automatisk.");
     }
 
     function escapeHtml(text) {
@@ -661,6 +652,14 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttribute(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
     }
   </script>
 </body>
