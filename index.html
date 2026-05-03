@@ -93,7 +93,7 @@
       margin-top: 10px;
     }
 
-    button, .button-link {
+    button {
       border: 0;
       background: var(--green);
       color: white;
@@ -102,14 +102,10 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
       min-height: 48px;
     }
 
-    button:hover, .button-link:hover { background: var(--dark-green); }
+    button:hover { background: var(--dark-green); }
 
     .secondary {
       background: #edf1ec;
@@ -125,7 +121,7 @@
 
     .yellow:hover { background: #f0c800; }
 
-    input, textarea {
+    input {
       width: 100%;
       padding: 15px;
       border-radius: 14px;
@@ -133,12 +129,6 @@
       font-size: 17px;
       margin-top: 8px;
       background: white;
-      font-family: Arial, Helvetica, sans-serif;
-    }
-
-    textarea {
-      min-height: 120px;
-      resize: vertical;
     }
 
     .video-wrap {
@@ -205,19 +195,13 @@
       color: var(--muted);
     }
 
-    .hidden {
-      display: none;
-    }
-
-    canvas {
-      display: none;
-    }
+    canvas { display: none; }
 
     @media (max-width: 520px) {
       .page { padding: 10px; }
       .header, .card { border-radius: 18px; }
       h1 { font-size: 26px; }
-      button, .button-link { width: 100%; }
+      button { width: 100%; }
     }
   </style>
 </head>
@@ -239,26 +223,26 @@
         <h2>1. Scan stregkode</h2>
 
         <div class="button-row">
-          <button onclick="startScanner()">Start scanning</button>
-          <button class="secondary" onclick="stopScanner()">Stop scanning</button>
+          <button onclick="startBarcodeScanner()">Start scanning</button>
+          <button class="secondary" onclick="stopBarcodeScanner()">Stop scanning</button>
         </div>
 
         <div class="video-wrap">
-          <video id="video" muted playsinline></video>
+          <video id="barcodeVideo" muted playsinline></video>
           <div class="scan-frame"></div>
         </div>
 
-        <div id="cameraControls" class="controls">
-          <label for="zoomSlider">Zoom</label>
-          <input id="zoomSlider" type="range" min="1" max="1" step="0.1" value="1" oninput="setZoom(this.value)" />
-          <div class="small" id="zoomText">Zoom ikke aktiv endnu</div>
+        <div id="barcodeControls" class="controls">
+          <label for="barcodeZoomSlider">Zoom</label>
+          <input id="barcodeZoomSlider" type="range" min="1" max="1" step="0.1" value="1" oninput="setBarcodeZoom(this.value)" />
+          <div class="small" id="barcodeZoomText">Zoom ikke aktiv endnu</div>
 
           <div class="button-row">
-            <button id="torchButton" class="secondary" onclick="toggleTorch()">Tænd/sluk lys</button>
+            <button id="barcodeTorchButton" class="secondary" onclick="toggleBarcodeTorch()">Tænd/sluk lys</button>
           </div>
         </div>
 
-        <div id="status" class="status">Klar til scanning.</div>
+        <div id="barcodeStatus" class="status">Klar til scanning.</div>
 
         <h2>2. Indtast stregkode manuelt</h2>
         <input id="manualBarcode" placeholder="Indtast stregkode, fx 5711953070205" inputmode="numeric" />
@@ -268,13 +252,13 @@
 
         <h2>3. Tag billede af produkt</h2>
         <p class="small">
-          Brug denne, hvis stregkoden ikke virker. Tag et billede af forsiden af produktet, så forsøger appen at læse teksten.
+          Brug denne, hvis stregkoden ikke virker. Start kameraet, hold produktets forside tydeligt i billedet, og tryk derefter “Tag billede og læs tekst”.
         </p>
 
         <div class="button-row">
-          <button onclick="startPhotoCamera()">Start kamera til billede</button>
-          <button class="secondary" onclick="takeProductPhoto()">Tag billede og læs tekst</button>
-          <button class="secondary" onclick="stopPhotoCamera()">Stop billedkamera</button>
+          <button onclick="startPhotoCamera()">Start produktkamera</button>
+          <button class="yellow" onclick="takeProductPhoto()">Tag billede og læs tekst</button>
+          <button class="secondary" onclick="stopPhotoCamera()">Stop produktkamera</button>
         </div>
 
         <div class="video-wrap">
@@ -283,7 +267,17 @@
 
         <canvas id="photoCanvas"></canvas>
 
-        <div id="ocrStatus" class="status">Klar til billedgenkendelse.</div>
+        <div id="photoControls" class="controls">
+          <label for="photoZoomSlider">Zoom</label>
+          <input id="photoZoomSlider" type="range" min="1" max="1" step="0.1" value="1" oninput="setPhotoZoom(this.value)" />
+          <div class="small" id="photoZoomText">Zoom ikke aktiv endnu</div>
+
+          <div class="button-row">
+            <button id="photoTorchButton" class="secondary" onclick="togglePhotoTorch()">Tænd/sluk lys</button>
+          </div>
+        </div>
+
+        <div id="photoStatus" class="status">Klar til produktbillede.</div>
       </section>
 
       <section id="result"></section>
@@ -291,14 +285,17 @@
   </main>
 
   <script>
-    let codeReader = null;
-    let currentStream = null;
-    let currentTrack = null;
-    let torchOn = false;
-    let nativeDetector = null;
-    let scanTimer = null;
+    let barcodeReader = null;
+    let barcodeStream = null;
+    let barcodeTrack = null;
+    let barcodeTorchOn = false;
+    let barcodeDetector = null;
+    let barcodeTimer = null;
     let isProcessingBarcode = false;
+
     let photoStream = null;
+    let photoTrack = null;
+    let photoTorchOn = false;
 
     document.addEventListener("DOMContentLoaded", function() {
       document.getElementById("manualBarcode").addEventListener("keydown", function(event) {
@@ -309,12 +306,12 @@
       });
     });
 
-    function setStatus(text) {
-      document.getElementById("status").innerText = text;
+    function setBarcodeStatus(text) {
+      document.getElementById("barcodeStatus").innerText = text;
     }
 
-    function setOcrStatus(text) {
-      document.getElementById("ocrStatus").innerText = text;
+    function setPhotoStatus(text) {
+      document.getElementById("photoStatus").innerText = text;
     }
 
     function cleanText(value) {
@@ -368,7 +365,7 @@
     function openBestGuess() {
       const searchText = getCurrentSearchText();
       if (!searchText) {
-        setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
+        setBarcodeStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
         return;
       }
       window.open(buildGoogleLuckyUrl(searchText), "_blank", "noopener");
@@ -377,16 +374,16 @@
     function openGoogleSearch() {
       const searchText = getCurrentSearchText();
       if (!searchText) {
-        setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
+        setBarcodeStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
         return;
       }
       window.open(buildGoogleSearchUrl(searchText), "_blank", "noopener");
     }
 
-    async function startScanner() {
+    async function startBarcodeScanner() {
       try {
-        stopScanner();
-        setStatus("Starter kamera...");
+        stopBarcodeScanner();
+        setBarcodeStatus("Starter kamera...");
 
         const constraints = {
           video: {
@@ -397,42 +394,42 @@
           audio: false
         };
 
-        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+        barcodeStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-        const video = document.getElementById("video");
-        video.srcObject = currentStream;
+        const video = document.getElementById("barcodeVideo");
+        video.srcObject = barcodeStream;
         await video.play();
 
-        currentTrack = currentStream.getVideoTracks()[0];
-        setupCameraControls();
+        barcodeTrack = barcodeStream.getVideoTracks()[0];
+        setupCameraControls(barcodeTrack, "barcode");
 
         isProcessingBarcode = false;
 
         if ("BarcodeDetector" in window) {
-          nativeDetector = new BarcodeDetector({
+          barcodeDetector = new BarcodeDetector({
             formats: ["ean_13", "ean_8", "upc_a", "upc_e"]
           });
 
-          startNativeScanLoop();
-          setStatus("Scanner med mobilens indbyggede stregkodelæser. Hold stregkoden inden for den gule ramme.");
+          startNativeBarcodeLoop();
+          setBarcodeStatus("Scanner med mobilens indbyggede stregkodelæser. Hold stregkoden inden for den gule ramme.");
         } else {
-          startZXingScanner(video);
-          setStatus("Scanner med fallback-læser. Hold stregkoden roligt inden for den gule ramme.");
+          startZXingBarcodeScanner(video);
+          setBarcodeStatus("Scanner med fallback-læser. Hold stregkoden roligt inden for den gule ramme.");
         }
       } catch (error) {
         console.error(error);
-        setStatus("Kameraet kunne ikke startes. Tjek at siden åbnes via HTTPS, og at kameraadgang er tilladt.");
+        setBarcodeStatus("Kameraet kunne ikke startes. Tjek at siden åbnes via HTTPS, og at kameraadgang er tilladt.");
       }
     }
 
-    function startNativeScanLoop() {
-      const video = document.getElementById("video");
+    function startNativeBarcodeLoop() {
+      const video = document.getElementById("barcodeVideo");
 
-      scanTimer = setInterval(async function() {
-        if (!nativeDetector || isProcessingBarcode || video.readyState < 2) return;
+      barcodeTimer = setInterval(async function() {
+        if (!barcodeDetector || isProcessingBarcode || video.readyState < 2) return;
 
         try {
-          const barcodes = await nativeDetector.detect(video);
+          const barcodes = await barcodeDetector.detect(video);
 
           if (barcodes && barcodes.length > 0) {
             const code = barcodes[0].rawValue;
@@ -447,7 +444,7 @@
       }, 250);
     }
 
-    function startZXingScanner(video) {
+    function startZXingBarcodeScanner(video) {
       const hints = new Map();
       const formats = [
         ZXing.BarcodeFormat.EAN_13,
@@ -459,9 +456,9 @@
       hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
       hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
-      codeReader = new ZXing.BrowserMultiFormatReader(hints, 300);
+      barcodeReader = new ZXing.BrowserMultiFormatReader(hints, 300);
 
-      codeReader.decodeFromVideoElement(video, async function(result, error) {
+      barcodeReader.decodeFromVideoElement(video, async function(result, error) {
         if (result && result.text) {
           await handleScannedBarcode(result.text);
         }
@@ -483,110 +480,39 @@
         navigator.vibrate(120);
       }
 
-      setStatus("Stregkode læst: " + barcode);
-      stopScanner();
+      setBarcodeStatus("Stregkode læst: " + barcode);
+      stopBarcodeScanner();
 
       await lookupBarcode(barcode);
     }
 
-    function stopScanner() {
-      if (scanTimer) {
-        clearInterval(scanTimer);
-        scanTimer = null;
+    function stopBarcodeScanner() {
+      if (barcodeTimer) {
+        clearInterval(barcodeTimer);
+        barcodeTimer = null;
       }
 
-      if (codeReader) {
-        try { codeReader.reset(); } catch (e) {}
-        codeReader = null;
+      if (barcodeReader) {
+        try { barcodeReader.reset(); } catch (e) {}
+        barcodeReader = null;
       }
 
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-        currentStream = null;
-        currentTrack = null;
+      if (barcodeStream) {
+        barcodeStream.getTracks().forEach(track => track.stop());
+        barcodeStream = null;
+        barcodeTrack = null;
       }
 
-      nativeDetector = null;
-      torchOn = false;
-      document.getElementById("cameraControls").style.display = "none";
-    }
-
-    function setupCameraControls() {
-      const controls = document.getElementById("cameraControls");
-      const zoomSlider = document.getElementById("zoomSlider");
-      const zoomText = document.getElementById("zoomText");
-      const torchButton = document.getElementById("torchButton");
-
-      if (!currentTrack || !currentTrack.getCapabilities) {
-        controls.style.display = "none";
-        return;
-      }
-
-      const capabilities = currentTrack.getCapabilities();
-      let showControls = false;
-
-      if (capabilities.zoom) {
-        zoomSlider.min = capabilities.zoom.min;
-        zoomSlider.max = capabilities.zoom.max;
-        zoomSlider.step = capabilities.zoom.step || 0.1;
-        zoomSlider.value = capabilities.zoom.min;
-        zoomText.innerText = "Træk mod højre for at zoome ind.";
-        zoomSlider.parentElement.style.display = "block";
-        showControls = true;
-      } else {
-        zoomSlider.parentElement.style.display = "none";
-      }
-
-      if (capabilities.torch) {
-        torchButton.style.display = "inline-flex";
-        showControls = true;
-      } else {
-        torchButton.style.display = "none";
-      }
-
-      controls.style.display = showControls ? "block" : "none";
-    }
-
-    async function setZoom(value) {
-      if (!currentTrack) return;
-
-      try {
-        await currentTrack.applyConstraints({
-          advanced: [{ zoom: Number(value) }]
-        });
-
-        document.getElementById("zoomText").innerText =
-          "Zoom: " + Number(value).toFixed(1) + "x";
-      } catch (error) {
-        console.error(error);
-        document.getElementById("zoomText").innerText =
-          "Zoom understøttes ikke på denne telefon/browser.";
-      }
-    }
-
-    async function toggleTorch() {
-      if (!currentTrack) return;
-
-      try {
-        torchOn = !torchOn;
-
-        await currentTrack.applyConstraints({
-          advanced: [{ torch: torchOn }]
-        });
-
-        document.getElementById("torchButton").innerText =
-          torchOn ? "Sluk lys" : "Tænd lys";
-      } catch (error) {
-        console.error(error);
-        setStatus("Lys understøttes desværre ikke på denne telefon/browser.");
-      }
+      barcodeDetector = null;
+      barcodeTorchOn = false;
+      document.getElementById("barcodeControls").style.display = "none";
     }
 
     async function lookupManualBarcode() {
       const barcode = document.getElementById("manualBarcode").value.trim();
 
       if (!barcode) {
-        setStatus("Skriv en stregkode først.");
+        setBarcodeStatus("Skriv en stregkode først.");
         return;
       }
 
@@ -597,7 +523,7 @@
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = "";
 
-      setStatus("Slår stregkode op...");
+      setBarcodeStatus("Slår stregkode op...");
 
       try {
         const openFoodFactsUrl =
@@ -638,7 +564,7 @@
           extra: ""
         }, "Produkt fundet");
 
-        setStatus("Færdig. Ret felterne, hvis du vil forbedre søgningen.");
+        setBarcodeStatus("Færdig. Ret felterne, hvis du vil forbedre søgningen.");
       } catch (error) {
         console.error(error);
         showEditableResult({
@@ -654,25 +580,30 @@
     async function startPhotoCamera() {
       try {
         stopPhotoCamera();
-        setOcrStatus("Starter kamera til billede...");
+        setPhotoStatus("Starter produktkamera...");
 
-        photoStream = await navigator.mediaDevices.getUserMedia({
+        const constraints = {
           video: {
             facingMode: { ideal: "environment" },
             width: { ideal: 1920 },
             height: { ideal: 1080 }
           },
           audio: false
-        });
+        };
+
+        photoStream = await navigator.mediaDevices.getUserMedia(constraints);
 
         const video = document.getElementById("photoVideo");
         video.srcObject = photoStream;
         await video.play();
 
-        setOcrStatus("Kamera klar. Hold produktets forside tydeligt i billedet og tryk “Tag billede og læs tekst”.");
+        photoTrack = photoStream.getVideoTracks()[0];
+        setupCameraControls(photoTrack, "photo");
+
+        setPhotoStatus("Produktkamera klar. Hold forsiden tydeligt i billedet og tryk “Tag billede og læs tekst”.");
       } catch (error) {
         console.error(error);
-        setOcrStatus("Billedkameraet kunne ikke startes. Tjek kameraadgang.");
+        setPhotoStatus("Produktkameraet kunne ikke startes. Tjek kameraadgang.");
       }
     }
 
@@ -680,10 +611,14 @@
       if (photoStream) {
         photoStream.getTracks().forEach(track => track.stop());
         photoStream = null;
+        photoTrack = null;
       }
 
       const video = document.getElementById("photoVideo");
       video.srcObject = null;
+
+      photoTorchOn = false;
+      document.getElementById("photoControls").style.display = "none";
     }
 
     async function takeProductPhoto() {
@@ -691,11 +626,11 @@
       const canvas = document.getElementById("photoCanvas");
 
       if (!photoStream || video.readyState < 2) {
-        setOcrStatus("Start kameraet til billede først.");
+        setPhotoStatus("Start produktkameraet først. Når billedet vises, kan du tage et billede.");
         return;
       }
 
-      setOcrStatus("Tager billede...");
+      setPhotoStatus("Tager billede...");
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -703,7 +638,7 @@
       const context = canvas.getContext("2d");
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      setOcrStatus("Læser tekst fra billedet. Det kan tage 5-15 sekunder...");
+      setPhotoStatus("Læser tekst fra billedet. Det kan tage 5-20 sekunder...");
 
       try {
         const result = await Tesseract.recognize(canvas, "dan+eng");
@@ -719,7 +654,7 @@
             extra: ""
           }, "Kunne ikke læse tydelig tekst");
 
-          setOcrStatus("Kunne ikke læse tydelig tekst. Prøv et skarpere billede tættere på forsiden.");
+          setPhotoStatus("Kunne ikke læse tydelig tekst. Prøv med bedre lys og tættere på produktets forside.");
           return;
         }
 
@@ -731,11 +666,113 @@
           extra: ""
         }, "Tekst fundet fra billede");
 
-        setOcrStatus("Tekst fundet. Ret felterne, så søgningen bliver mere præcis.");
+        setPhotoStatus("Tekst fundet. Ret felterne, så søgningen bliver mere præcis.");
         stopPhotoCamera();
       } catch (error) {
         console.error(error);
-        setOcrStatus("OCR fejlede. Prøv igen med bedre lys og tydeligere tekst.");
+        setPhotoStatus("OCR fejlede. Prøv igen med bedre lys og tydeligere tekst.");
+      }
+    }
+
+    function setupCameraControls(track, type) {
+      const controls = document.getElementById(type + "Controls");
+      const zoomSlider = document.getElementById(type + "ZoomSlider");
+      const zoomText = document.getElementById(type + "ZoomText");
+      const torchButton = document.getElementById(type + "TorchButton");
+
+      if (!track || !track.getCapabilities) {
+        controls.style.display = "none";
+        return;
+      }
+
+      const capabilities = track.getCapabilities();
+      let showControls = false;
+
+      if (capabilities.zoom) {
+        zoomSlider.min = capabilities.zoom.min;
+        zoomSlider.max = capabilities.zoom.max;
+        zoomSlider.step = capabilities.zoom.step || 0.1;
+        zoomSlider.value = capabilities.zoom.min;
+        zoomText.innerText = "Træk mod højre for at zoome ind.";
+        zoomSlider.parentElement.style.display = "block";
+        showControls = true;
+      } else {
+        zoomSlider.parentElement.style.display = "none";
+      }
+
+      if (capabilities.torch) {
+        torchButton.style.display = "inline-flex";
+        showControls = true;
+      } else {
+        torchButton.style.display = "none";
+      }
+
+      controls.style.display = showControls ? "block" : "none";
+    }
+
+    async function setBarcodeZoom(value) {
+      if (!barcodeTrack) return;
+
+      try {
+        await barcodeTrack.applyConstraints({
+          advanced: [{ zoom: Number(value) }]
+        });
+
+        document.getElementById("barcodeZoomText").innerText =
+          "Zoom: " + Number(value).toFixed(1) + "x";
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    async function setPhotoZoom(value) {
+      if (!photoTrack) return;
+
+      try {
+        await photoTrack.applyConstraints({
+          advanced: [{ zoom: Number(value) }]
+        });
+
+        document.getElementById("photoZoomText").innerText =
+          "Zoom: " + Number(value).toFixed(1) + "x";
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    async function toggleBarcodeTorch() {
+      if (!barcodeTrack) return;
+
+      try {
+        barcodeTorchOn = !barcodeTorchOn;
+
+        await barcodeTrack.applyConstraints({
+          advanced: [{ torch: barcodeTorchOn }]
+        });
+
+        document.getElementById("barcodeTorchButton").innerText =
+          barcodeTorchOn ? "Sluk lys" : "Tænd lys";
+      } catch (error) {
+        console.error(error);
+        setBarcodeStatus("Lys understøttes desværre ikke på denne telefon/browser.");
+      }
+    }
+
+    async function togglePhotoTorch() {
+      if (!photoTrack) return;
+
+      try {
+        photoTorchOn = !photoTorchOn;
+
+        await photoTrack.applyConstraints({
+          advanced: [{ torch: photoTorchOn }]
+        });
+
+        document.getElementById("photoTorchButton").innerText =
+          photoTorchOn ? "Sluk lys" : "Tænd lys";
+      } catch (error) {
+        console.error(error);
+        setPhotoStatus("Lys understøttes desværre ikke på denne telefon/browser.");
       }
     }
 
