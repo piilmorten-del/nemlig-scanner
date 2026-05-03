@@ -8,112 +8,326 @@
   <script src="https://unpkg.com/@zxing/library@latest"></script>
 
   <style>
+    :root {
+      --green: #00a651;
+      --dark-green: #007a3d;
+      --light-green: #eaf8f0;
+      --yellow: #ffd84d;
+      --bg: #f7f7f3;
+      --text: #172017;
+      --muted: #667066;
+      --card: #ffffff;
+      --border: #dfe6dc;
+      --shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #f6f7f8;
       margin: 0;
-      padding: 20px;
-      color: #111;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 18px;
     }
 
     .app {
-      max-width: 720px;
+      max-width: 760px;
       margin: 0 auto;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--green), var(--dark-green));
+      color: white;
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       background: white;
-      padding: 20px;
-      border-radius: 16px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      color: var(--green);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--yellow);
+      border-radius: 999px;
+      display: inline-block;
     }
 
     h1 {
-      margin-top: 0;
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: -0.7px;
     }
 
-    button, .button-link {
-      display: inline-block;
-      background: #111;
+    h2 {
+      margin: 22px 0 10px;
+      font-size: 19px;
+    }
+
+    p {
+      line-height: 1.45;
+    }
+
+    .header p {
+      margin: 0;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .notice {
+      background: var(--light-green);
+      border: 1px solid #bfe8cf;
+      color: #164b2c;
+      border-radius: 16px;
+      padding: 13px;
+      font-size: 14px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button,
+    .button-link {
+      appearance: none;
+      border: 0;
+      background: var(--green);
       color: white;
-      border: none;
       padding: 14px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      margin: 8px 6px 0 0;
-      text-decoration: none;
+      border-radius: 14px;
       font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 48px;
+    }
+
+    button:hover,
+    .button-link:hover {
+      background: var(--dark-green);
     }
 
     .secondary {
-      background: #e5e7eb;
-      color: #111;
+      background: #edf1ec;
+      color: var(--text);
+    }
+
+    .secondary:hover {
+      background: #dfe6dc;
+    }
+
+    .yellow {
+      background: var(--yellow);
+      color: #1b1b1b;
+    }
+
+    .yellow:hover {
+      background: #f0c800;
     }
 
     input {
       width: 100%;
-      box-sizing: border-box;
-      padding: 14px;
-      margin-top: 12px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 16px;
+      padding: 15px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      font-size: 17px;
+      margin-top: 8px;
+      background: white;
     }
 
     video {
       width: 100%;
       margin-top: 12px;
-      border-radius: 12px;
-      background: #000;
+      border-radius: 18px;
+      background: #111;
+      border: 1px solid var(--border);
+      max-height: 460px;
+      object-fit: cover;
     }
 
-    .box {
-      background: #f1f5f9;
-      padding: 14px;
-      border-radius: 12px;
-      margin-top: 14px;
-    }
-
-    .warning {
-      background: #fff7ed;
-      border: 1px solid #fed7aa;
-    }
-
-    .muted {
-      color: #666;
+    .status {
+      background: #fff;
+      border: 1px dashed var(--border);
+      padding: 13px;
+      border-radius: 14px;
+      color: var(--muted);
+      margin-top: 12px;
       font-size: 14px;
     }
 
+    .controls {
+      display: none;
+      margin-top: 12px;
+      background: #f4f8f3;
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 16px;
+    }
+
+    .control-line {
+      margin-top: 10px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      margin: 0;
+    }
+
     .result-title {
-      font-size: 20px;
-      font-weight: bold;
+      font-size: 22px;
+      font-weight: 800;
       margin-bottom: 8px;
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .product-line {
+      background: #f8faf7;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 11px;
+    }
+
+    .product-line strong {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 520px) {
+      .page {
+        padding: 10px;
+      }
+
+      .header,
+      .card {
+        border-radius: 18px;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      button,
+      .button-link {
+        width: 100%;
+      }
     }
   </style>
 </head>
 
 <body>
-  <div class="app">
-    <h1>Nemlig Scanner</h1>
+  <main class="page">
+    <div class="app">
+      <section class="header">
+        <div class="logo">
+          nemlig<span class="logo-dot"></span>scanner
+        </div>
+        <h1>Scan en vare og find den hos nemlig.com</h1>
+        <p>
+          Scan stregkoden eller skriv den manuelt. Appen finder produktdata og sender dig videre til bedste bud.
+        </p>
+      </section>
 
-    <div class="box warning">
-      <strong>Vigtigt:</strong><br>
-      Appen bruger ikke nemligs interne produktdata. Den finder først produktet via stregkoden og hjælper dig derefter med at finde bedste match.
+      <section class="card">
+        <div class="notice">
+          <strong>Prototype:</strong> Appen bruger åbne produktdata og Google-søgning. Derfor er resultatet et bedste bud, ikke et garanteret match.
+        </div>
+
+        <h2>1. Scan med kamera</h2>
+
+        <div class="button-row">
+          <button onclick="startScanner()">Start scanning</button>
+          <button class="secondary" onclick="stopScanner()">Stop scanning</button>
+        </div>
+
+        <video id="video" muted playsinline></video>
+
+        <div id="cameraControls" class="controls">
+          <div class="control-line">
+            <label for="zoomSlider">Zoom</label>
+            <input id="zoomSlider" type="range" min="1" max="1" step="0.1" value="1" oninput="setZoom(this.value)" />
+            <div class="small" id="zoomText">Zoom ikke aktiv endnu</div>
+          </div>
+
+          <div class="button-row">
+            <button id="torchButton" class="secondary" onclick="toggleTorch()">Tænd/sluk lys</button>
+          </div>
+        </div>
+
+        <div id="status" class="status">Klar til scanning.</div>
+
+        <h2>2. Eller indtast stregkode manuelt</h2>
+        <input id="manualBarcode" placeholder="Indtast stregkode, fx 5711953070205" inputmode="numeric" />
+        <div class="button-row">
+          <button onclick="lookupManualBarcode()">Find produkt</button>
+        </div>
+      </section>
+
+      <section id="result"></section>
     </div>
-
-    <h2>Scan med kamera</h2>
-    <button onclick="startScanner()">Start scanning</button>
-    <button class="secondary" onclick="stopScanner()">Stop scanning</button>
-
-    <video id="video" muted playsinline></video>
-
-    <h2>Indtast stregkode manuelt</h2>
-    <input id="manualBarcode" placeholder="Indtast stregkode, fx 5711953070205" />
-    <button onclick="lookupManualBarcode()">Find produkt</button>
-
-    <div id="status" class="box muted">Klar</div>
-    <div id="result"></div>
-  </div>
+  </main>
 
   <script>
     let codeReader = null;
+    let currentStream = null;
+    let currentTrack = null;
+    let torchOn = false;
 
     function setStatus(text) {
       document.getElementById("status").innerText = text;
@@ -124,28 +338,60 @@
       return String(value).trim();
     }
 
+    function cleanSearchText(text) {
+      return String(text || "")
+        .replace(/\bøkologisk\b/gi, "øko")
+        .replace(/\bgram\b/gi, "g")
+        .replace(/\bliter\b/gi, "l")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
     function buildGoogleSearchUrl(searchText) {
       return "https://www.google.com/search?q=" +
-        encodeURIComponent("site:nemlig.com " + searchText);
+        encodeURIComponent("site:nemlig.com " + cleanSearchText(searchText));
+    }
+
+    function buildGoogleLuckyUrl(searchText) {
+      return "https://www.google.com/search?btnI=1&q=" +
+        encodeURIComponent("site:nemlig.com " + cleanSearchText(searchText));
     }
 
     function buildNemligSearchUrl(searchText) {
       return "https://www.nemlig.com/soegning/" +
-        encodeURIComponent(searchText);
-    }
-
-    function buildFallbackGoogleUrl(barcode) {
-      return "https://www.google.com/search?q=" +
-        encodeURIComponent("site:nemlig.com " + barcode);
+        encodeURIComponent(cleanSearchText(searchText));
     }
 
     async function startScanner() {
       try {
         setStatus("Starter kamera...");
 
+        stopScanner();
+
+        const constraints = {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            focusMode: { ideal: "continuous" },
+            advanced: [
+              { focusMode: "continuous" }
+            ]
+          },
+          audio: false
+        };
+
+        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+        const video = document.getElementById("video");
+        video.srcObject = currentStream;
+        await video.play();
+
+        currentTrack = currentStream.getVideoTracks()[0];
+        setupCameraControls();
+
         codeReader = new ZXing.BrowserMultiFormatReader();
 
-        await codeReader.decodeFromVideoDevice(null, "video", async function(result, error) {
+        await codeReader.decodeFromVideoElement(video, async function(result, error) {
           if (result) {
             const barcode = result.text;
             stopScanner();
@@ -153,18 +399,97 @@
             await lookupBarcode(barcode);
           }
         });
+
+        setStatus("Kameraet er klar. Hold stregkoden roligt i midten af billedet.");
       } catch (error) {
         console.error(error);
-        setStatus("Kameraet kunne ikke startes. Prøv at åbne siden via HTTPS, fx GitHub Pages.");
+        setStatus("Kameraet kunne ikke startes. Åbn siden via HTTPS og tillad kameraadgang.");
       }
     }
 
     function stopScanner() {
       if (codeReader) {
-        codeReader.reset();
+        try {
+          codeReader.reset();
+        } catch (e) {}
         codeReader = null;
       }
-      setStatus("Scanning stoppet.");
+
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        currentStream = null;
+        currentTrack = null;
+      }
+
+      document.getElementById("cameraControls").style.display = "none";
+      torchOn = false;
+    }
+
+    function setupCameraControls() {
+      const controls = document.getElementById("cameraControls");
+      const zoomSlider = document.getElementById("zoomSlider");
+      const zoomText = document.getElementById("zoomText");
+      const torchButton = document.getElementById("torchButton");
+
+      if (!currentTrack || !currentTrack.getCapabilities) {
+        controls.style.display = "none";
+        return;
+      }
+
+      const capabilities = currentTrack.getCapabilities();
+      let hasUsefulControl = false;
+
+      if (capabilities.zoom) {
+        zoomSlider.min = capabilities.zoom.min;
+        zoomSlider.max = capabilities.zoom.max;
+        zoomSlider.step = capabilities.zoom.step || 0.1;
+        zoomSlider.value = capabilities.zoom.min;
+        zoomText.innerText = "Træk for at zoome ind på stregkoden.";
+        zoomSlider.parentElement.style.display = "block";
+        hasUsefulControl = true;
+      } else {
+        zoomSlider.parentElement.style.display = "none";
+      }
+
+      if (capabilities.torch) {
+        torchButton.style.display = "inline-flex";
+        hasUsefulControl = true;
+      } else {
+        torchButton.style.display = "none";
+      }
+
+      controls.style.display = hasUsefulControl ? "block" : "none";
+    }
+
+    async function setZoom(value) {
+      if (!currentTrack) return;
+
+      try {
+        await currentTrack.applyConstraints({
+          advanced: [{ zoom: Number(value) }]
+        });
+
+        document.getElementById("zoomText").innerText = "Zoom: " + Number(value).toFixed(1) + "x";
+      } catch (error) {
+        console.error(error);
+        document.getElementById("zoomText").innerText = "Zoom understøttes ikke på denne telefon/browser.";
+      }
+    }
+
+    async function toggleTorch() {
+      if (!currentTrack) return;
+
+      try {
+        torchOn = !torchOn;
+        await currentTrack.applyConstraints({
+          advanced: [{ torch: torchOn }]
+        });
+
+        document.getElementById("torchButton").innerText = torchOn ? "Sluk lys" : "Tænd lys";
+      } catch (error) {
+        console.error(error);
+        setStatus("Lys understøttes desværre ikke på denne telefon/browser.");
+      }
     }
 
     async function lookupManualBarcode() {
@@ -220,33 +545,54 @@
           return;
         }
 
+        const luckyUrl = buildGoogleLuckyUrl(searchText);
         const googleUrl = buildGoogleSearchUrl(searchText);
         const nemligUrl = buildNemligSearchUrl(searchText);
 
         resultDiv.innerHTML = `
-          <div class="box">
+          <section class="card">
             <div class="result-title">Produkt fundet</div>
 
-            <p><strong>Stregkode:</strong> ${escapeHtml(barcode)}</p>
-            <p><strong>Brand:</strong> ${escapeHtml(brand || "Ukendt")}</p>
-            <p><strong>Produkt:</strong> ${escapeHtml(name || "Ukendt")}</p>
-            <p><strong>Størrelse:</strong> ${escapeHtml(quantity || "Ukendt")}</p>
+            <div class="product-grid">
+              <div class="product-line">
+                <strong>Stregkode</strong>
+                ${escapeHtml(barcode)}
+              </div>
+              <div class="product-line">
+                <strong>Brand</strong>
+                ${escapeHtml(brand || "Ukendt")}
+              </div>
+              <div class="product-line">
+                <strong>Produkt</strong>
+                ${escapeHtml(name || "Ukendt")}
+              </div>
+              <div class="product-line">
+                <strong>Størrelse</strong>
+                ${escapeHtml(quantity || "Ukendt")}
+              </div>
+            </div>
 
-            <p class="muted">
-              Brug først Google-knappen. Den søger kun på nemlig.com og finder ofte produktsiden bedre end nemligs egen søgning.
+            <p class="small">
+              Start med “Gå direkte til bedste bud”. Hvis Google ikke sender dig direkte til det rigtige produkt, så brug Google-søgningen nedenunder.
             </p>
 
-            <a class="button-link" href="${googleUrl}" target="_blank" rel="noopener">
-              Find via Google
-            </a>
+            <div class="button-row">
+              <a class="button-link yellow" href="${luckyUrl}" target="_blank" rel="noopener">
+                Gå direkte til bedste bud
+              </a>
 
-            <a class="button-link secondary" href="${nemligUrl}" target="_blank" rel="noopener">
-              Prøv søgning på nemlig.com
-            </a>
-          </div>
+              <a class="button-link" href="${googleUrl}" target="_blank" rel="noopener">
+                Søg via Google
+              </a>
+
+              <a class="button-link secondary" href="${nemligUrl}" target="_blank" rel="noopener">
+                Prøv nemlig-søgning
+              </a>
+            </div>
+          </section>
         `;
 
-        setStatus("Færdig. Brug helst 'Find via Google'.");
+        setStatus("Færdig. Brug helst “Gå direkte til bedste bud”.");
       } catch (error) {
         console.error(error);
         showFallbackResult(barcode);
@@ -256,28 +602,39 @@
     function showFallbackResult(barcode) {
       const resultDiv = document.getElementById("result");
 
-      const googleUrl = buildFallbackGoogleUrl(barcode);
+      const googleUrl = buildGoogleSearchUrl(barcode);
+      const luckyUrl = buildGoogleLuckyUrl(barcode);
       const nemligUrl = buildNemligSearchUrl(barcode);
 
       resultDiv.innerHTML = `
-        <div class="box">
+        <section class="card">
           <div class="result-title">Produktet blev ikke fundet automatisk</div>
 
-          <p><strong>Stregkode:</strong> ${escapeHtml(barcode)}</p>
-
           <p>
-            Open Food Facts havde ikke nok data om produktet.
-            Du kan stadig prøve at søge på stregkoden.
+            Open Food Facts havde ikke nok data om produktet. Du kan stadig prøve at søge på stregkoden.
           </p>
 
-          <a class="button-link" href="${googleUrl}" target="_blank" rel="noopener">
-            Søg via Google
-          </a>
+          <div class="product-grid">
+            <div class="product-line">
+              <strong>Stregkode</strong>
+              ${escapeHtml(barcode)}
+            </div>
+          </div>
 
-          <a class="button-link secondary" href="${nemligUrl}" target="_blank" rel="noopener">
-            Prøv søgning på nemlig.com
-          </a>
-        </div>
+          <div class="button-row">
+            <a class="button-link yellow" href="${luckyUrl}" target="_blank" rel="noopener">
+              Gå direkte til bedste bud
+            </a>
+
+            <a class="button-link" href="${googleUrl}" target="_blank" rel="noopener">
+              Søg via Google
+            </a>
+
+            <a class="button-link secondary" href="${nemligUrl}" target="_blank" rel="noopener">
+              Prøv nemlig-søgning
+            </a>
+          </div>
+        </section>
       `;
 
       setStatus("Produktet blev ikke fundet automatisk.");
