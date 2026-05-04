@@ -165,6 +165,12 @@
       font-size: 14px;
     }
 
+    .status.loading {
+      color: var(--text);
+      border-color: var(--green);
+      background: var(--light-green);
+    }
+
     .controls {
       display: none;
       margin-top: 12px;
@@ -194,6 +200,16 @@
       color: var(--muted);
     }
 
+    .saved {
+      background: #fff7d6;
+      border: 1px solid #f2d56b;
+      color: #4d3b00;
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
     @media (max-width: 520px) {
       .page { padding: 10px; }
       .header, .card { border-radius: 18px; }
@@ -209,12 +225,12 @@
       <section class="header">
         <div class="logo">nemlig<span class="logo-dot"></span>scanner</div>
         <h1>Scan en vare og find den hos nemlig.com</h1>
-        <p>Scan stregkoden eller skriv den manuelt. Ret selv produktdata, hvis appen ikke finder nok information.</p>
+        <p>Scan stregkoden eller skriv den manuelt. Ret selv produktdata, og appen husker dine rettelser næste gang.</p>
       </section>
 
       <section class="card">
         <div class="notice">
-          <strong>Prototype:</strong> Appen bruger åbne produktdata og Google-søgning. Du kan selv rette brand, produkt, størrelse og ekstra søgeord.
+          <strong>Prototype:</strong> Appen bruger åbne produktdata, Google-søgning og lokale gemte rettelser i din browser.
         </div>
 
         <h2>1. Scan med kamera</h2>
@@ -245,6 +261,7 @@
         <input id="manualBarcode" placeholder="Indtast stregkode, fx 5711953070205" inputmode="numeric" />
         <div class="button-row">
           <button onclick="lookupManualBarcode()">Find produkt</button>
+          <button class="secondary" onclick="resetApp()">Prøv igen</button>
         </div>
       </section>
 
@@ -270,8 +287,15 @@
       });
     });
 
-    function setStatus(text) {
-      document.getElementById("status").innerText = text;
+    function setStatus(text, loading = false) {
+      const status = document.getElementById("status");
+      status.innerText = text;
+
+      if (loading) {
+        status.classList.add("loading");
+      } else {
+        status.classList.remove("loading");
+      }
     }
 
     function cleanText(value) {
@@ -321,19 +345,58 @@
       return words.slice(0, 4).join(" ");
     }
 
-    function getCurrentSearchText() {
-      const brand = document.getElementById("editBrand")?.value || "";
-      const product = document.getElementById("editProduct")?.value || "";
-      const size = document.getElementById("editSize")?.value || "";
-      const extra = document.getElementById("editExtra")?.value || "";
+    function getCurrentValues() {
+      return {
+        barcode: document.getElementById("editBarcode")?.value || "",
+        brand: document.getElementById("editBrand")?.value || "",
+        product: document.getElementById("editProduct")?.value || "",
+        size: document.getElementById("editSize")?.value || "",
+        extra: document.getElementById("editExtra")?.value || ""
+      };
+    }
 
-      const simplifiedProduct = simplifyProductName(product);
+    function getCurrentSearchText() {
+      const values = getCurrentValues();
+      const simplifiedProduct = simplifyProductName(values.product);
 
       return cleanSearchText(
-        [brand, simplifiedProduct, size, extra]
+        [values.brand, simplifiedProduct, values.size, values.extra]
           .filter(Boolean)
           .join(" ")
       );
+    }
+
+    function getSavedProduct(barcode) {
+      if (!barcode) return null;
+
+      try {
+        const raw = localStorage.getItem("nemligScanner_" + barcode);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function saveCurrentProduct() {
+      const values = getCurrentValues();
+      const barcode = values.barcode.trim();
+
+      if (!barcode) {
+        setStatus("Der mangler stregkode, så produktet kan ikke gemmes.");
+        return;
+      }
+
+      localStorage.setItem("nemligScanner_" + barcode, JSON.stringify({
+        barcode: values.barcode,
+        brand: values.brand,
+        product: values.product,
+        size: values.size,
+        extra: values.extra,
+        savedAt: new Date().toISOString()
+      }));
+
+      setStatus("Gemt. Næste gang du scanner samme stregkode, bruger appen dine rettelser.");
     }
 
     function buildGoogleSearchUrl(searchText) {
@@ -347,27 +410,41 @@
     }
 
     function openBestGuess() {
+      saveCurrentProduct();
+
       const searchText = getCurrentSearchText();
       if (!searchText) {
         setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
         return;
       }
+
       window.open(buildGoogleLuckyUrl(searchText), "_blank", "noopener");
     }
 
     function openGoogleSearch() {
+      saveCurrentProduct();
+
       const searchText = getCurrentSearchText();
       if (!searchText) {
         setStatus("Skriv mindst produktnavn eller ekstra søgeord først.");
         return;
       }
+
       window.open(buildGoogleSearchUrl(searchText), "_blank", "noopener");
+    }
+
+    function resetApp() {
+      stopScanner();
+      document.getElementById("manualBarcode").value = "";
+      document.getElementById("result").innerHTML = "";
+      setStatus("Klar til scanning.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     async function startScanner() {
       try {
         stopScanner();
-        setStatus("Starter kamera...");
+        setStatus("Starter kamera...", true);
 
         const constraints = {
           video: {
@@ -464,7 +541,7 @@
         navigator.vibrate(120);
       }
 
-      setStatus("Stregkode læst: " + barcode);
+      setStatus("Stregkode læst: " + barcode, true);
       stopScanner();
 
       await lookupBarcode(barcode);
@@ -578,7 +655,15 @@
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = "";
 
-      setStatus("Slår stregkode op...");
+      setStatus("Slår stregkode op...", true);
+
+      const savedProduct = getSavedProduct(barcode);
+
+      if (savedProduct) {
+        showEditableResult(savedProduct, "Produkt fundet fra dine gemte rettelser", true);
+        setStatus("Gemt produkt fundet. Appen bruger dine tidligere rettelser.");
+        return;
+      }
 
       try {
         const openFoodFactsUrl =
@@ -596,7 +681,8 @@
             product: "",
             size: "",
             extra: ""
-          }, "Produktet blev ikke fundet automatisk");
+          }, "Produktet blev ikke fundet automatisk", false);
+          setStatus("Produktet blev ikke fundet automatisk. Udfyld felterne manuelt.");
           return;
         }
 
@@ -617,7 +703,7 @@
           product: name,
           size: quantity,
           extra: ""
-        }, "Produkt fundet");
+        }, "Produkt fundet", false);
 
         setStatus("Færdig. Ret felterne, hvis du vil forbedre søgningen.");
       } catch (error) {
@@ -628,7 +714,8 @@
           product: "",
           size: "",
           extra: ""
-        }, "Produktet blev ikke fundet automatisk");
+        }, "Produktet blev ikke fundet automatisk", false);
+        setStatus("Der opstod en fejl. Udfyld felterne manuelt og søg via Google.");
       }
     }
 
@@ -644,15 +731,21 @@
       }, 150);
     }
 
-    function showEditableResult(values, title) {
+    function showEditableResult(values, title, isSaved) {
       const resultDiv = document.getElementById("result");
 
       resultDiv.innerHTML = `
         <section class="card">
           <div class="result-title">${escapeHtml(title)}</div>
 
+          ${isSaved ? `
+            <div class="saved">
+              Dette produkt er hentet fra dine egne gemte rettelser på denne enhed.
+            </div>
+          ` : ""}
+
           <p class="small">
-            Ret felterne, hvis produktdata er mangelfulde. Knapperne bruger en renset version af oplysningerne, så søgningen ikke bliver for specifik.
+            Ret felterne, hvis produktdata er mangelfulde. Knapperne bruger en renset version af oplysningerne.
           </p>
 
           <label for="editBarcode">Stregkode</label>
@@ -671,12 +764,14 @@
           <input id="editExtra" value="${escapeAttribute(values.extra || "")}" placeholder="Fx øko, fuldkorn, laktosefri, original" />
 
           <p class="small">
-            Tip: Hvis søgningen stadig er for bred eller forkert, så skriv selv danske søgeord i “Ekstra søgeord”, fx “mørk chokolade”, “kiks” eller “ris”.
+            Når du trykker på en søgeknap, gemmes dine rettelser automatisk for denne stregkode.
           </p>
 
           <div class="button-row">
             <button class="yellow" onclick="openBestGuess()">Gå direkte til bedste bud</button>
             <button onclick="openGoogleSearch()">Søg via Google</button>
+            <button class="secondary" onclick="saveCurrentProduct()">Gem rettelser</button>
+            <button class="secondary" onclick="resetApp()">Prøv igen</button>
           </div>
         </section>
       `;
