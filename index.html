@@ -279,13 +279,46 @@
       return String(value).trim();
     }
 
-    function cleanSearchText(text) {
+    function normalizeProductText(text) {
       return String(text || "")
+        .replace(/\bgalletas\b/gi, "")
+        .replace(/\bcon\b/gi, "")
+        .replace(/\bchocolate negro\b/gi, "mørk chokolade")
+        .replace(/\bchocolate blanco\b/gi, "hvid chokolade")
+        .replace(/\bchocolate con leche\b/gi, "mælkechokolade")
+        .replace(/\bdark chocolate\b/gi, "mørk chokolade")
+        .replace(/\bmilk chocolate\b/gi, "mælkechokolade")
+        .replace(/\bwhite chocolate\b/gi, "hvid chokolade")
+        .replace(/\bbiscuits\b/gi, "kiks")
+        .replace(/\bcookies\b/gi, "kiks")
+        .replace(/\brice\b/gi, "ris")
+        .replace(/\bmilk\b/gi, "mælk")
+        .replace(/\borganic\b/gi, "øko")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function cleanSearchText(text) {
+      return normalizeProductText(text)
         .replace(/\bøkologisk\b/gi, "øko")
         .replace(/\bgram\b/gi, "g")
         .replace(/\bliter\b/gi, "l")
         .replace(/\s+/g, " ")
         .trim();
+    }
+
+    function simplifyProductName(productName) {
+      let text = normalizeProductText(productName);
+
+      const words = text
+        .split(/\s+/)
+        .map(word => word.trim())
+        .filter(Boolean)
+        .filter(word => !/^(og|med|the|and|with|de|la|el|los|las|les|des|du|van|von)$/i.test(word));
+
+      if (words.length <= 4) return words.join(" ");
+
+      return words.slice(0, 4).join(" ");
     }
 
     function getCurrentSearchText() {
@@ -294,7 +327,13 @@
       const size = document.getElementById("editSize")?.value || "";
       const extra = document.getElementById("editExtra")?.value || "";
 
-      return cleanSearchText([brand, product, size, extra].filter(Boolean).join(" "));
+      const simplifiedProduct = simplifyProductName(product);
+
+      return cleanSearchText(
+        [brand, simplifiedProduct, size, extra]
+          .filter(Boolean)
+          .join(" ")
+      );
     }
 
     function buildGoogleSearchUrl(searchText) {
@@ -613,7 +652,7 @@
           <div class="result-title">${escapeHtml(title)}</div>
 
           <p class="small">
-            Ret felterne, hvis produktdata er mangelfulde. Knapperne bruger de oplysninger, du har skrevet her.
+            Ret felterne, hvis produktdata er mangelfulde. Knapperne bruger en renset version af oplysningerne, så søgningen ikke bliver for specifik.
           </p>
 
           <label for="editBarcode">Stregkode</label>
@@ -632,7 +671,7 @@
           <input id="editExtra" value="${escapeAttribute(values.extra || "")}" placeholder="Fx øko, fuldkorn, laktosefri, original" />
 
           <p class="small">
-            Tip: Jo mere konkret du skriver, jo bedre bliver Google-søgningen. Brand + produkt + størrelse virker typisk bedst.
+            Tip: Hvis søgningen stadig er for bred eller forkert, så skriv selv danske søgeord i “Ekstra søgeord”, fx “mørk chokolade”, “kiks” eller “ris”.
           </p>
 
           <div class="button-row">
